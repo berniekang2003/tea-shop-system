@@ -84,7 +84,10 @@ body {
 .action-btn.done .label { color: #34c759; }
 
 .status-bar {
-  background: #fff; border-top: 0.5px solid #c6c6c8; padding: 8px 0;
+  position: fixed; bottom: 60px; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: 480px;
+  background: #fff; border-top: 0.5px solid #c6c6c8; border-bottom: 0.5px solid #c6c6c8;
+  padding: 8px 0; z-index: 9;
   display: grid; grid-template-columns: 1fr 1px 1fr 1px 1fr;
 }
 .status-divider { background: #c6c6c8; }
