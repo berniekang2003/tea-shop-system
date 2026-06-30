@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>分店叫茶</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { height: 100%; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang TC', 'Noto Sans TC', sans-serif;
+  background: #f2f2f7;
+  color: #1c1c1e;
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+#app { display: flex; flex-direction: column; min-height: 100vh; }
+
+.topbar {
+  background: #fff;
+  border-bottom: 0.5px solid #c6c6c8;
+  padding: 12px 16px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.topbar-inner { display: flex; align-items: center; justify-content: space-between; }
+.topbar-title { font-size: 17px; font-weight: 600; }
+.topbar-sub { font-size: 13px; color: #8e8e93; margin-top: 2px; }
+.back-btn { background: none; border: none; font-size: 15px; color: #007aff; padding: 0; cursor: pointer; }
+
+.content { flex: 1; padding: 16px; padding-bottom: 120px; }
+
+.section-title {
+  font-size: 12px; font-weight: 600; color: #8e8e93;
+  text-transform: uppercase; letter-spacing: 0.04em;
+  margin: 20px 0 8px;
+}
+.section-title:first-child { margin-top: 0; }
+
+.card { background: #fff; border-radius: 12px; padding: 0 16px; margin-bottom: 12px; overflow: hidden; }
+
+.row { display: flex; align-items: center; padding: 12px 0; border-bottom: 0.5px solid #f2f2f7; gap: 10px; }
+.row:last-child { border-bottom: none; }
+.row-name { flex: 1; font-size: 15px; }
+
+.level-wrap { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.level-track { flex: 1; height: 8px; background: #f2f2f7; border-radius: 4px; overflow: hidden; }
+.level-fill { height: 100%; border-radius: 4px; }
+.level-fill.high { background: #34c759; }
+.level-fill.mid  { background: #ff9500; }
+.level-fill.low  { background: #ff3b30; }
+.level-text { font-size: 13px; font-weight: 600; min-width: 40px; text-align: right; }
+.level-text.high { color: #34c759; }
+.level-text.mid  { color: #ff9500; }
+.level-text.low  { color: #ff3b30; }
+.level-max { font-size: 12px; color: #8e8e93; }
+
+.open-ok   { font-size: 12px; color: #8e8e93; }
+.open-warn { font-size: 12px; color: #ff9500; font-weight: 500; }
+.open-today{ font-size: 12px; color: #34c759; font-weight: 500; }
+
+.rot-strip { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.rot-chip { font-size: 12px; padding: 4px 10px; border-radius: 20px; font-weight: 500; }
+.rot-chip.active  { background: #5856d6; color: #fff; }
+.rot-chip.next    { background: #ede9ff; color: #5856d6; border: 1px solid #c4b5fd; }
+.rot-chip.standby { background: #f2f2f7; color: #8e8e93; }
+
+.rot-hint { font-size: 13px; color: #5856d6; background: #ede9ff; border-radius: 10px; padding: 8px 12px; margin-bottom: 10px; }
+
+.action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+.action-btn {
+  background: #fff; border: 0.5px solid #c6c6c8; border-radius: 12px;
+  padding: 14px 12px; cursor: pointer; text-align: center;
+}
+.action-btn:active { background: #f2f2f7; }
+.action-btn .icon  { font-size: 24px; margin-bottom: 4px; }
+.action-btn .label { font-size: 14px; font-weight: 500; }
+.action-btn .sublabel { font-size: 11px; color: #8e8e93; margin-top: 2px; }
+.action-btn.done { border-color: #34c759; }
+.action-btn.done .label { color: #34c759; }
+
+.status-bar {
+  background: #fff; border-top: 0.5px solid #c6c6c8; padding: 8px 0;
+  display: grid; grid-template-columns: 1fr 1px 1fr 1px 1fr;
+}
+.status-divider { background: #c6c6c8; }
+.status-item { padding: 0 6px; text-align: center; }
+.status-item-label { font-size: 10px; color: #8e8e93; margin-bottom: 2px; }
+.status-item-val { font-size: 11px; font-weight: 500; }
+.status-item-val.done    { color: #34c759; }
+.status-item-val.pending { color: #8e8e93; }
+.status-item-val.waiting { color: #ff9500; }
+
+.navbar {
+  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: 480px; background: #fff;
+  border-top: 0.5px solid #c6c6c8;
+  display: grid; grid-template-columns: repeat(3, 1fr); z-index: 10;
+}
+.nav-btn {
+  background: none; border: none; padding: 8px 4px 16px; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  color: #8e8e93; font-size: 10px;
+}
+.nav-btn.active { color: #007aff; }
+.nav-btn .nav-icon { font-size: 22px; line-height: 1; }
+
+.field-row {
+  display: flex; align-items: center; padding: 10px 0;
+  border-bottom: 0.5px solid #f2f2f7; gap: 8px;
+}
+.field-row:last-child { border-bottom: none; }
+.field-name { flex: 1; font-size: 15px; }
+.field-tag {
+  font-size: 11px; background: #ede9ff; color: #5856d6;
+  padding: 2px 6px; border-radius: 6px; margin-left: 4px;
+}
+.field-input {
+  width: 60px; text-align: center; font-size: 16px;
+  border: 1px solid #c6c6c8; border-radius: 8px; padding: 6px;
+  background: #f2f2f7; color: #1c1c1e;
+}
+.field-input:focus { outline: none; border-color: #007aff; background: #fff; }
+.field-input.suggested { border-color: #5856d6; background: #ede9ff; color: #5856d6; }
+.field-unit { font-size: 13px; color: #8e8e93; width: 20px; }
+
+.date-input {
+  border: 1px solid #c6c6c8; border-radius: 8px; padding: 5px 8px;
+  font-size: 13px; background: #f2f2f7; color: #1c1c1e; width: 140px;
+}
+
+.check-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.check-item {
+  display: flex; align-items: center; gap: 10px; background: #fff;
+  border: 1px solid #c6c6c8; border-radius: 10px; padding: 10px 12px; cursor: pointer;
+}
+.check-item.checked { border-color: #007aff; background: #e8f3ff; }
+.check-box {
+  width: 22px; height: 22px; border-radius: 6px; border: 1.5px solid #c6c6c8;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 14px;
+}
+.check-item.checked .check-box { background: #007aff; border-color: #007aff; color: #fff; }
+.check-label { font-size: 14px; }
+.check-item.checked .check-label { color: #007aff; font-weight: 500; }
+
+.btn-primary {
+  width: 100%; padding: 15px; background: #007aff; color: #fff;
+  border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 16px;
+}
+.btn-primary:active { background: #0062cc; }
+.btn-primary:disabled { background: #c6c6c8; cursor: not-allowed; }
+
+.mon-input {
+  width: 58px; text-align: center; font-size: 15px; font-weight: 500;
+  border: 1px solid #007aff; border-radius: 8px; padding: 5px;
+  background: #e8f3ff; color: #007aff;
+}
+.mon-input.adjusted { border-color: #ff9500; background: #fff8ec; color: #ff9500; }
+.mon-req-val { font-size: 14px; color: #8e8e93; min-width: 36px; text-align: right; }
+.mon-arrow { color: #c6c6c8; }
+
+.arr-item {
+  display: flex; align-items: center; padding: 12px 0;
+  border-bottom: 0.5px solid #f2f2f7; gap: 10px;
+}
+.arr-item:last-child { border-bottom: none; }
+.arr-check {
+  width: 28px; height: 28px; border-radius: 8px; border: 2px solid #c6c6c8;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; flex-shrink: 0; font-size: 16px;
+}
+.arr-check.checked { background: #34c759; border-color: #34c759; color: #fff; }
+
+.supply-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px; }
+.supply-tag { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: 8px; font-size: 13px; }
+.supply-tag.yes { background: #e8fff0; color: #34c759; border: 1px solid #a8f0c0; }
+.supply-tag.no  { background: #f2f2f7; color: #8e8e93; }
+
+.hist-row { display: flex; align-items: center; padding: 12px 0; border-bottom: 0.5px solid #f2f2f7; gap: 10px; }
+.hist-row:last-child { border-bottom: none; }
+.hist-date { font-size: 15px; font-weight: 500; }
+.hist-meta { font-size: 12px; color: #8e8e93; margin-top: 2px; }
+
+.badge { font-size: 11px; padding: 3px 8px; border-radius: 20px; font-weight: 500; }
+.badge.done    { background: #e8fff0; color: #34c759; }
+.badge.shipped { background: #fff8ec; color: #ff9500; }
+.badge.pending { background: #ede9ff; color: #5856d6; }
+
+.loading { text-align: center; padding: 40px 16px; color: #8e8e93; font-size: 15px; }
+
+.toast {
+  position: fixed; top: 70px; left: 50%; transform: translateX(-50%);
+  background: rgba(0,0,0,0.8); color: #fff; padding: 10px 20px;
+  border-radius: 20px; font-size: 14px; z-index: 100;
+  opacity: 0; transition: opacity 0.3s; white-space: nowrap; pointer-events: none;
+}
+.toast.show { opacity: 1; }
+
+.soldout-btn {
+  font-size: 11px; color: #ff3b30; background: #fff2f0;
+  border: 1px solid #ffccc7; border-radius: 6px; padding: 3px 8px;
+  cursor: pointer; margin-left: 6px; white-space: nowrap;
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const API = 'https://script.google.com/macros/s/AKfycbyKrS_BEKBj7Y2ZGq6iz4996VXMAApjxsNwaHFysmmjzsDjWi_L8p7O4LwM-8yJP_w-FQ/exec';
+
+const SUPPLY_UNITS = {
+  杯子:'條', 瓶子:'支', 感熱紙:'卷', 標籤貼:'卷', 試飲杯:'條',
+  細吸管:'包', 粗吸管:'包', '1號袋':'包', '2號袋':'包', '4號袋':'包', 封膜卷:'卷'
+};
+const INGREDIENTS = ['牛奶','柳橙','梅子汁','梅子凍','冰塊','梅子顆粒'];
+const SUPPLIES = ['杯子','瓶子','感熱紙','標籤貼','試飲杯','細吸管','粗吸管','1號袋','2號袋','4號袋','封膜卷'];
+
+const state = {
+  screen: 'home',
+  prevScreen: 'home',
+  items: { fixed: [], rotating: [], rotatingAll: [], nextItem: null },
+  inventory: [],
+  order: null,
+  loaded: false,
+};
+
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+}
+
+async function apiGet(action, params = {}) {
+  const url = new URL(API);
+  url.searchParams.set('action', action);
+  Object.entries(params).forEach(([k,v]) => url.searchParams.set(k,v));
+  const res = await fetch(url.toString());
+  return res.json();
+}
+
+async function apiPost(body) {
+  const res = await fetch(API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify(body),
+  });
+  return res.json();
+}
+
+function showToast(msg, duration = 2500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), duration);
+}
+
+function go(screen) {
+  state.prevScreen = state.screen;
+  state.screen = screen;
+  render();
+}
+
+function back() { go(state.prevScreen || 'home'); }
+
+async function loadAll() {
+  try {
+    const [itemsData, invData, orderData] = await Promise.all([
+      apiGet('getItems'),
+      apiGet('getInventory', { date: todayStr() }),
+      apiGet('getOrder', { date: todayStr() }),
+    ]);
+    state.items = itemsData;
+    state.inventory = invData.items || [];
+    state.order = orderData.found ? orderData : null;
+    state.loaded = true;
+    render();
+  } catch(e) {
+    document.getElementById('app').innerHTML = '<div class="loading">載入失敗，請重新整理頁面</div>';
+  }
+}
+
+function getInvItem(name) { return state.inventory.find(i => i.name === name); }
+
+function calcDaysOpen(openDate) {
+  if (!openDate) return null;
+  const parts = openDate.split('/');
+  if (parts.length < 3) return null;
+  const open = new Date(parts[0], parts[1]-1, parts[2]);
+  const today = new Date(); today.setHours(0,0,0,0);
+  return Math.floor((today - open) / 86400000);
+}
+
+function levelClass(pct) {
+  if (pct > 0.5) return 'high';
+  if (pct > 0.25) return 'mid';
+  return 'low';
+}
+
+function openDateLabel(openDate) {
+  const days = calcDaysOpen(openDate);
+  if (days === null) return '';
+  if (days === 0) return '<span class="open-today">今日開桶</span>';
+  if (days >= 3) return `<span class="open-warn">開桶第 ${days} 天</span>`;
+  return `<span class="open-ok">開桶第 ${days} 天</span>`;
+}
+
+function renderNavbar(active) {
+  const items = [
+    { id:'home', label:'今日', icon:'🏠' },
+    { id:'ordersheet', label:'叫貨單', icon:'📋' },
+    { id:'history', label:'歷史', icon:'🕐' },
+  ];
+  return `<div class="navbar">${items.map(i =>
+    `<button class="nav-btn ${active===i.id?'active':''}" onclick="go('${i.id}')">
+      <span class="nav-icon">${i.icon}</span>${i.label}
+    </button>`).join('')}</div>`;
+}
+
+// ── 主畫面 ────────────────────────────────────
+function renderHome() {
+  const today = todayStr();
+  const { fixed, rotating, rotatingAll, nextItem } = state.items;
+  const order = state.order;
+
+  const invDone = state.inventory.length > 0;
+  const invTime = invDone ? (state.inventory[0].time || '').split(' ')[1] || '' : '';
+  const orderDone = !!order;
+  const shippingDone = order && (order.status === '已出貨' || order.status === '已完結');
+  const arrivalDone = order && order.status === '已完結';
+
+  const rotStrip = rotatingAll.map(r => {
+    const isNext = nextItem && r.name === nextItem.name && r.status !== '現售';
+    const cls = r.status === '現售' ? 'active' : isNext ? 'next' : 'standby';
+    return `<span class="rot-chip ${cls}">${r.name}${isNext?' ↓':''}</span>`;
+  }).join('');
+
+  const nextHint = nextItem
+    ? `<div class="rot-hint">🔄 下一輪替建議：<strong>${nextItem.name}</strong></div>` : '';
+
+  function teaCard(item) {
+    const inv = getInvItem(item.name);
+    const qty = inv ? Number(inv.qty) : null;
+    const openDate = inv ? inv.openDate : '';
+    const pct = qty !== null ? qty / item.cups : 0;
+    const cls = levelClass(pct);
+    const fillPct = Math.round(pct * 100);
+    const soldoutBtn = item.status === '現售'
+      ? `<button class="soldout-btn" onclick="markSoldOut('${item.name}')">售完</button>` : '';
+
+    return `<div class="row" style="flex-direction:column;align-items:flex-start">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;width:100%">
+        <span style="font-size:15px;font-weight:500">${item.name} ${soldoutBtn}</span>
+        ${openDate ? openDateLabel(openDate) : '<span class="open-ok">未填</span>'}
+      </div>
+      <div class="level-wrap" style="width:100%">
+        <div class="level-track"><div class="level-fill ${cls}" style="width:${fillPct}%"></div></div>
+        <span class="level-text ${cls}">${qty !== null ? qty : '—'}</span>
+        <span class="level-max">／${item.cups}</span>
+      </div>
+    </div>`;
+  }
+
+  return `
+    <div class="topbar">
+      <div class="topbar-inner">
+        <div>
+          <div class="topbar-title">分店叫茶</div>
+          <div class="topbar-sub">${today}</div>
+        </div>
+      </div>
+    </div>
+    <div class="content">
+      <div class="action-grid">
+        <button class="action-btn ${invDone?'done':''}" onclick="go('inventory')">
+          <div class="icon">📋</div>
+          <div class="label">庫存登記</div>
+          <div class="sublabel">${invDone ? '✓ '+invTime+' 完成' : '尚未填寫'}</div>
+        </button>
+        <button class="action-btn ${orderDone?'done':''}" onclick="go(${orderDone ? "'ordersheet'" : "'order'"})">
+          <div class="icon">📦</div>
+          <div class="label">叫貨申請</div>
+          <div class="sublabel">${orderDone ? '✓ 已送出' : '尚未申請'}</div>
+        </button>
+      </div>
+
+      <div class="section-title">傳統原味輪替</div>
+      <div class="rot-strip">${rotStrip}</div>
+      ${nextHint}
+      <div class="card">${rotating.map(teaCard).join('') || '<div style="padding:12px 0;color:#8e8e93">無現售品項</div>'}</div>
+
+      <div class="section-title">固定茶品</div>
+      <div class="card">${fixed.map(teaCard).join('')}</div>
+    </div>
+    <div class="status-bar">
+      <div class="status-item">
+        <div class="status-item-label">庫存登記</div>
+        <div class="status-item-val ${invDone?'done':'pending'}">${invDone ? invTime+'✓' : '未登記'}</div>
+      </div>
+      <div class="status-divider"></div>
+      <div class="status-item">
+        <div class="status-item-label">叫貨申請</div>
+        <div class="status-item-val ${orderDone?'done':'pending'}">${orderDone ? '已送出✓' : '未申請'}</div>
+      </div>
+      <div class="status-divider"></div>
+      <div class="status-item">
+        <div class="status-item-label">到貨確認</div>
+        <div class="status-item-val ${arrivalDone?'done':shippingDone?'waiting':'pending'}">${arrivalDone ? '完結✓' : shippingDone ? '待確認' : '等待中'}</div>
+      </div>
+    </div>
+    ${renderNavbar('home')}`;
+}
+
+// ── 庫存登記 ──────────────────────────────────
+function renderInventory() {
+  const { fixed, rotating } = state.items;
+
+  function invRow(item) {
+    const existing = getInvItem(item.name);
+    const qty = existing ? existing.qty : '';
+    const openDate = existing ? (existing.openDate || '').replace(/\//g,'-') : '';
+    const key = item.name.replace(/\W/g,'_');
+    return `<div class="field-row" style="flex-wrap:wrap;gap:6px">
+      <div style="width:100%;display:flex;align-items:center;justify-content:space-between">
+        <span class="field-name">${item.name}</span>
+        <div style="display:flex;align-items:center;gap:6px">
+          <input class="field-input" type="number" min="0" max="${item.cups}"
+            id="qty_${key}" value="${qty}" placeholder="0">
+          <span class="field-unit">杯</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;padding-bottom:4px">
+        <span style="font-size:12px;color:#8e8e93">開桶日：</span>
+        <input type="date" class="date-input" id="open_${key}" value="${openDate}">
+      </div>
+    </div>`;
+  }
+
+  return `
+    <div class="topbar">
+      <div class="topbar-inner">
+        <button class="back-btn" onclick="back()">← 返回</button>
+        <div class="topbar-title">庫存登記</div>
+        <div style="width:48px"></div>
+      </div>
+    </div>
+    <div class="content">
+      <div class="section-title">傳統原味（杯）</div>
+      <div class="card">${rotating.map(invRow).join('')}</div>
+      <div class="section-title">固定茶品（杯）</div>
+      <div class="card">${fixed.map(invRow).join('')}</div>
+      <button class="btn-primary" onclick="saveInventory()">儲存庫存登記</button>
+    </div>`;
+}
+
+async function saveInventory() {
+  const { fixed, rotating } = state.items;
+  const allItems = [...rotating, ...fixed];
+  const items = [];
+
+  for (const item of allItems) {
+    const key = item.name.replace(/\W/g,'_');
+    const qtyEl = document.getElementById(`qty_${key}`);
+    const openEl = document.getElementById(`open_${key}`);
+    const qty = qtyEl ? qtyEl.value : '';
+    const openDate = openEl ? openEl.value.replace(/-/g,'/') : '';
+    if (qty !== '') items.push({ name: item.name, qty: Number(qty), openDate });
+  }
+
+  if (!items.length) { showToast('請至少填寫一項'); return; }
+  const btn = document.querySelector('.btn-primary');
+  if (btn) { btn.disabled = true; btn.textContent = '儲存中...'; }
+
+  const res = await apiPost({ action: 'saveInventory', date: todayStr(), items });
+  if (res.ok) {
+    const invRes = await apiGet('getInventory', { date: todayStr() });
+    state.inventory = invRes.items || [];
+    showToast('庫存登記完成 ✓');
+    go('home');
+  } else {
+    showToast('儲存失敗：' + (res.error || ''));
+    if (btn) { btn.disabled = false; btn.textContent = '儲存庫存登記'; }
+  }
+}
+
+// ── 叫貨申請 ──────────────────────────────────
+function renderOrder() {
+  const { fixed, rotating, nextItem } = state.items;
+
+  const rotHint = nextItem
+    ? `<div class="rot-hint">🔄 系統建議補入：<strong>${nextItem.name}</strong>（下一輪替）</div>` : '';
+
+  function teaRow(item, suggested = false) {
+    const key = item.name.replace(/\W/g,'_');
+    return `<div class="field-row">
+      <span class="field-name">${item.name}${suggested ? '<span class="field-tag">輪替補入</span>' : ''}</span>
+      <input class="field-input ${suggested?'suggested':''}" type="number" min="0"
+        id="tea_${key}" value="${suggested?'1':''}" placeholder="0">
+      <span class="field-unit">桶</span>
+    </div>`;
+  }
+
+  const checkItems = INGREDIENTS.map(i => `
+    <label class="check-item" id="chk_${i}" onclick="toggleCheck('chk_${i}')">
+      <div class="check-box" id="chkbox_${i}"></div>
+      <span class="check-label">${i}</span>
+    </label>`).join('');
+
+  const supplyRows = SUPPLIES.map(s => `
+    <div class="field-row">
+      <span class="field-name">${s}</span>
+      <input class="field-input" type="number" min="0" id="sup_${s}" placeholder="0">
+      <span class="field-unit">${SUPPLY_UNITS[s]}</span>
+    </div>`).join('');
+
+  return `
+    <div class="topbar">
+      <div class="topbar-inner">
+        <button class="back-btn" onclick="back()">← 返回</button>
+        <div class="topbar-title">叫貨申請</div>
+        <div style="width:48px"></div>
+      </div>
+    </div>
+    <div class="content">
+      <div class="section-title">傳統原味（桶）</div>
+      ${rotHint}
+      <div class="card">
+        ${rotating.map(r => teaRow(r)).join('')}
+        ${nextItem ? teaRow(nextItem, true) : ''}
+      </div>
+      <div class="section-title">固定茶品（桶）</div>
+      <div class="card">${fixed.map(f => teaRow(f)).join('')}</div>
+      <div class="section-title">配料（勾選即出）</div>
+      <div class="check-grid">${checkItems}</div>
+      <div class="section-title" style="margin-top:16px">備品</div>
+      <div class="card">${supplyRows}</div>
+      <button class="btn-primary" onclick="submitOrder()">送出叫貨申請</button>
+    </div>`;
+}
+
+function toggleCheck(id) {
+  const el = document.getElementById(id);
+  el.classList.toggle('checked');
+  el.querySelector('.check-box').textContent = el.classList.contains('checked') ? '✓' : '';
+}
+
+async function submitOrder() {
+  const { fixed, rotating, nextItem } = state.items;
+  const items = [];
+
+  const teaList = [...rotating, ...(nextItem ? [nextItem] : []), ...fixed];
+  teaList.forEach(item => {
+    const el = document.getElementById(`tea_${item.name.replace(/\W/g,'_')}`);
+    if (el && el.value && Number(el.value) > 0)
+      items.push({ cat:'茶品', name: item.name, qty: Number(el.value) });
+  });
+
+  INGREDIENTS.forEach(i => {
+    if (document.getElementById(`chk_${i}`)?.classList.contains('checked'))
+      items.push({ cat:'配料', name: i, qty: 1 });
+  });
+
+  SUPPLIES.forEach(s => {
+    const el = document.getElementById(`sup_${s}`);
+    if (el && el.value && Number(el.value) > 0)
+      items.push({ cat:'備品', name: s, qty: Number(el.value) });
+  });
+
+  if (!items.length) { showToast('請至少填寫一項需求'); return; }
+  const btn = document.querySelector('.btn-primary');
+  if (btn) { btn.disabled = true; btn.textContent = '送出中...'; }
+
+  const res = await apiPost({ action: 'submitOrder', date: todayStr(), items });
+  if (res.ok) {
+    const orderRes = await apiGet('getOrder', { date: todayStr() });
+    state.order = orderRes.found ? orderRes : null;
+    showToast('叫貨申請已送出 ✓');
+    go('ordersheet');
+  } else {
+    showToast('送出失敗：' + (res.error || ''));
+    if (btn) { btn.disabled = false; btn.textContent = '送出叫貨申請'; }
+  }
+}
+
+// ── 叫貨單 ────────────────────────────────────
+function renderOrderSheet() {
+  const order = state.order;
+  if (!order) return `
+    <div class="topbar"><div class="topbar-inner"><div class="topbar-title">叫貨單</div></div></div>
+    <div class="content"><div class="loading">今日尚無叫貨申請</div></div>
+    ${renderNavbar('ordersheet')}`;
+
+  const teaItems = order.items.filter(i => i.cat === '茶品');
+  const ingItems  = order.items.filter(i => i.cat === '配料');
+  const supItems  = order.items.filter(i => i.cat === '備品');
+
+  const statusBadge = { '已申請':'<span class="badge pending">等待出貨</span>', '已出貨':'<span class="badge shipped">等待到貨</span>', '已完結':'<span class="badge done">已完結</span>' }[order.status] || '';
+
+  const canShip = order.status === '已申請';
+  const canArrive = order.status === '已出貨';
+
+  function monRow(item, unit) {
+    const req = item.requested;
+    const shipped = item.shipped !== '' ? item.shipped : req;
+    return `<div class="field-row">
+      <span class="field-name">${item.name}</span>
+      <span class="mon-req-val">${req}${unit}</span>
+      <span class="mon-arrow"> → </span>
+      <input class="mon-input" type="number" min="0" id="ship_${item.name}"
+        value="${shipped}" ${canShip ? `oninput="checkAdj('ship_${item.name}',${req})"` : 'disabled'}>
+      <span class="field-unit">${unit}</span>
+    </div>`;
+  }
+
+  const ingTags = INGREDIENTS.map(i => {
+    const ordered = ingItems.find(x => x.name === i);
+    return `<div class="supply-tag ${ordered?'yes':'no'}">${ordered?'✓':'✕'} ${i}</div>`;
+  }).join('');
+
+  return `
+    <div class="topbar">
+      <div class="topbar-inner">
+        <div class="topbar-title">叫貨單</div>
+        ${statusBadge}
+      </div>
+      <div class="topbar-sub">申請 ${(order.requestTime||'').split(' ')[1]||''} ${order.shippingTime ? '・出貨 '+(order.shippingTime||'').split(' ')[1] : ''}</div>
+    </div>
+    <div class="content">
+      ${teaItems.length ? `
+        <div class="section-title">茶品</div>
+        <div style="display:flex;justify-content:flex-end;gap:16px;margin-bottom:4px;padding-right:20px">
+          <span style="font-size:12px;color:#8e8e93">申請</span>
+          <span style="font-size:12px;color:#007aff">出貨</span>
+        </div>
+        <div class="card">${teaItems.map(i => monRow(i,'桶')).join('')}</div>` : ''}
+
+      <div class="section-title">配料</div>
+      <div class="supply-grid">${ingTags}</div>
+
+      ${supItems.length ? `
+        <div class="section-title">備品</div>
+        <div class="card">${supItems.map(i => monRow(i, SUPPLY_UNITS[i.name]||'')).join('')}</div>` : ''}
+
+      ${canShip ? `
+        <p style="font-size:12px;color:#8e8e93;margin-top:8px;text-align:center">橘色 = 出貨量已調整</p>
+        <button class="btn-primary" onclick="confirmShipping()">確認出貨</button>` : ''}
+      ${canArrive ? `
+        <button class="btn-primary" style="background:#34c759;margin-top:16px" onclick="go('arrival')">確認到貨</button>` : ''}
+      ${order.status === '已完結' ? `
+        <div style="text-align:center;padding:16px;color:#34c759;font-weight:500">✓ 此單已完結</div>` : ''}
+    </div>
+    ${renderNavbar('ordersheet')}`;
+}
+
+function checkAdj(id, original) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.toggle('adjusted', Number(el.value) !== Number(original));
+}
+
+async function confirmShipping() {
+  const order = state.order;
+  const items = order.items
+    .filter(i => i.cat !== '配料')
+    .map(i => {
+      const el = document.getElementById(`ship_${i.name}`);
+      return { name: i.name, shipped: el ? Number(el.value) : i.requested };
+    });
+
+  const btn = document.querySelector('.btn-primary');
+  if (btn) { btn.disabled = true; btn.textContent = '確認中...'; }
+
+  const res = await apiPost({ action: 'confirmShipping', orderId: order.orderId, items });
+  if (res.ok) {
+    const orderRes = await apiGet('getOrder', { date: todayStr() });
+    state.order = orderRes.found ? orderRes : null;
+    showToast('出貨已確認 ✓');
+    render();
+  } else {
+    showToast('確認失敗：' + (res.error || ''));
+    if (btn) { btn.disabled = false; btn.textContent = '確認出貨'; }
+  }
+}
+
+// ── 到貨確認 ──────────────────────────────────
+function renderArrival() {
+  const order = state.order;
+  if (!order) { go('home'); return ''; }
+
+  const nonIng = order.items.filter(i => i.cat !== '配料');
+  const ing    = order.items.filter(i => i.cat === '配料');
+
+  const nonIngRows = nonIng.map(i => {
+    const unit = i.cat === '茶品' ? '桶' : (SUPPLY_UNITS[i.name] || '');
+    const shipped = i.shipped !== '' ? i.shipped : i.requested;
+    return `<div class="arr-item">
+      <div class="arr-check" id="arr_${i.name}" onclick="toggleArrCheck('${i.name}')"></div>
+      <div style="flex:1">
+        <div style="font-size:15px">${i.name}</div>
+        <div style="font-size:12px;color:#8e8e93">出貨 ${shipped} ${unit}</div>
+      </div>
+      <input class="field-input" type="number" min="0" id="arrqty_${i.name}" value="${shipped}" style="width:56px">
+      <span class="field-unit">${unit}</span>
+    </div>`;
+  }).join('');
+
+  const ingRows = ing.map(i => `
+    <div class="arr-item">
+      <div class="arr-check" id="arr_${i.name}" onclick="toggleArrCheck('${i.name}')"></div>
+      <div style="font-size:15px">${i.name}</div>
+    </div>`).join('');
+
+  return `
+    <div class="topbar">
+      <div class="topbar-inner">
+        <button class="back-btn" onclick="go('ordersheet')">← 返回</button>
+        <div class="topbar-title">到貨確認</div>
+        <div style="width:48px"></div>
+      </div>
+    </div>
+    <div class="content">
+      <p style="font-size:13px;color:#8e8e93;margin-bottom:16px">逐項打勾確認收到，數量有差異請修改。最終數量將成為實際出貨紀錄。</p>
+      ${nonIng.length ? `<div class="section-title">茶品 / 備品</div><div class="card">${nonIngRows}</div>` : ''}
+      ${ing.length ? `<div class="section-title">配料</div><div class="card">${ingRows}</div>` : ''}
+      <button class="btn-primary" style="background:#34c759" onclick="confirmArrival()">完成到貨確認</button>
+    </div>`;
+}
+
+function toggleArrCheck(name) {
+  const el = document.getElementById(`arr_${name}`);
+  el.classList.toggle('checked');
+  el.textContent = el.classList.contains('checked') ? '✓' : '';
+}
+
+async function confirmArrival() {
+  const order = state.order;
+  const nonIng = order.items.filter(i => i.cat !== '配料');
+  const ing    = order.items.filter(i => i.cat === '配料');
+  const items = [];
+
+  nonIng.forEach(i => {
+    const el = document.getElementById(`arrqty_${i.name}`);
+    items.push({ name: i.name, arrived: el ? Number(el.value) : 0 });
+  });
+  ing.forEach(i => {
+    const checked = document.getElementById(`arr_${i.name}`)?.classList.contains('checked');
+    items.push({ name: i.name, arrived: checked ? 1 : 0 });
+  });
+
+  const btn = document.querySelector('.btn-primary');
+  if (btn) { btn.disabled = true; btn.textContent = '確認中...'; }
+
+  const res = await apiPost({ action: 'confirmArrival', orderId: order.orderId, items });
+  if (res.ok) {
+    const orderRes = await apiGet('getOrder', { date: todayStr() });
+    state.order = orderRes.found ? orderRes : null;
+    showToast('到貨確認完成 ✓');
+    go('home');
+  } else {
+    showToast('確認失敗：' + (res.error || ''));
+    if (btn) { btn.disabled = false; btn.textContent = '完成到貨確認'; }
+  }
+}
+
+// ── 歷史 ──────────────────────────────────────
+function renderHistory() {
+  return `
+    <div class="topbar"><div class="topbar-inner"><div class="topbar-title">歷史紀錄</div></div></div>
+    <div class="content" id="hist-content"><div class="loading">載入中...</div></div>
+    ${renderNavbar('history')}`;
+}
+
+async function loadHistory() {
+  const res = await apiGet('getHistory');
+  const records = res.records || [];
+  const el = document.getElementById('hist-content');
+  if (!el) return;
+  if (!records.length) { el.innerHTML = '<div class="loading">尚無歷史紀錄</div>'; return; }
+
+  const statusMap = {
+    '已申請':'<span class="badge pending">已申請</span>',
+    '已出貨':'<span class="badge shipped">已出貨</span>',
+    '已完結':'<span class="badge done">已完結</span>',
+  };
+
+  el.innerHTML = `<div class="card" style="padding:0 16px">${records.map(r => `
+    <div class="hist-row">
+      <div style="flex:1">
+        <div class="hist-date">${r.date}</div>
+        <div class="hist-meta">
+          申請 ${(r.requestTime||'').split(' ')[1]||'—'}
+          ${r.shippingTime ? '・出貨 '+(r.shippingTime||'').split(' ')[1] : ''}
+          ${r.arrivalTime  ? '・到貨 '+(r.arrivalTime||'').split(' ')[1]  : ''}
+        </div>
+      </div>
+      ${statusMap[r.status]||''}
+    </div>`).join('')}</div>`;
+}
+
+// ── 標記售完 ──────────────────────────────────
+async function markSoldOut(name) {
+  if (!confirm(`確認「${name}」已售完？\n系統將切換至下一輪替品項。`)) return;
+  const res = await apiPost({ action: 'markSoldOut', item: name });
+  if (res.ok) {
+    const itemsRes = await apiGet('getItems');
+    state.items = itemsRes;
+    showToast(`${name} 已標記售完 ✓`);
+    render();
+  } else {
+    showToast('操作失敗：' + (res.error || ''));
+  }
+}
+
+// ── Render ────────────────────────────────────
+function render() {
+  const app = document.getElementById('app');
+  if (!state.loaded) {
+    app.innerHTML = '<div class="loading" style="padding-top:120px">載入中...</div>';
+    return;
+  }
+  const s = state.screen;
+  if      (s === 'home')       app.innerHTML = renderHome();
+  else if (s === 'inventory')  app.innerHTML = renderInventory();
+  else if (s === 'order')      app.innerHTML = renderOrder();
+  else if (s === 'ordersheet') app.innerHTML = renderOrderSheet();
+  else if (s === 'arrival')    app.innerHTML = renderArrival();
+  else if (s === 'history') { app.innerHTML = renderHistory(); loadHistory(); }
+}
+
+loadAll();
+</script>
+</body>
+</html>
