@@ -377,6 +377,7 @@ function renderHome() {
           <div class="topbar-title">分店叫茶</div>
           <div class="topbar-sub">${today}</div>
         </div>
+        <button onclick="go('settings')" style="background:none;border:none;font-size:22px;cursor:pointer;color:#8e8e93">⚙️</button>
       </div>
     </div>
     <div class="content">
@@ -780,6 +781,63 @@ async function confirmArrival() {
   }
 }
 
+// ── 設定 ──────────────────────────────────────
+function renderSettings() {
+  const { rotatingAll } = state.items;
+  const rows = rotatingAll.map(item => {
+    const isPaused = item.paused;
+    const isActive = item.status === '現售';
+    return `
+      <div class="field-row">
+        <div style="flex:1">
+          <div class="field-name">${item.name}</div>
+          <div style="font-size:12px;color:#8e8e93;margin-top:2px">
+            ${isActive ? '現售中' : item.status === '售完' ? '售完' : isPaused ? '已暫停' : '候補中'}
+          </div>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <span style="font-size:13px;color:${isPaused?'#ff3b30':'#8e8e93'}">${isPaused?'暫停':'正常'}</span>
+          <div onclick="togglePause('${item.name}', this)" style="
+            width:48px;height:28px;border-radius:14px;
+            background:${isPaused?'#ff3b30':'#e5e5ea'};
+            position:relative;cursor:pointer;transition:background 0.2s;flex-shrink:0">
+            <div style="
+              position:absolute;top:3px;
+              left:${isPaused?'23px':'3px'};
+              width:22px;height:22px;border-radius:11px;
+              background:#fff;transition:left 0.2s">
+            </div>
+          </div>
+        </label>
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="topbar">
+      <div class="topbar-inner">
+        <button class="back-btn" onclick="back()">← 返回</button>
+        <div class="topbar-title">輪替設定</div>
+        <div style="width:48px"></div>
+      </div>
+    </div>
+    <div class="content">
+      <p style="font-size:13px;color:#8e8e93;margin-bottom:16px">暫停的品項在輪替時會自動跳過，取消後恢復正常順序。</p>
+      <div class="card">${rows}</div>
+    </div>`;
+}
+
+async function togglePause(name, el) {
+  const res = await apiPost({ action: 'togglePause', item: name });
+  if (res.ok) {
+    const itemsRes = await apiGet('getItems');
+    state.items = itemsRes;
+    showToast('設定已更新 ✓');
+    render();
+  } else {
+    showToast('操作失敗');
+  }
+}
+
 // ── 歷史 ──────────────────────────────────────
 function renderHistory() {
   return `
@@ -842,7 +900,8 @@ function render() {
   else if (s === 'order')      app.innerHTML = renderOrder();
   else if (s === 'ordersheet') app.innerHTML = renderOrderSheet();
   else if (s === 'arrival')    app.innerHTML = renderArrival();
-  else if (s === 'history') { app.innerHTML = renderHistory(); loadHistory(); }
+  else if (s === 'history')  { app.innerHTML = renderHistory(); loadHistory(); }
+  else if (s === 'settings')   app.innerHTML = renderSettings();
 }
 
 loadAll();
