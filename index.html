@@ -496,7 +496,7 @@ async function saveInventory() {
 
 // ── 叫貨申請 ──────────────────────────────────
 function renderOrder() {
-  const { fixed, rotating, nextItem } = state.items;
+  const { fixed, rotating, rotatingAll, nextItem } = state.items;
 
   const rotHint = nextItem
     ? `<div class="rot-hint">🔄 系統建議補入：<strong>${nextItem.name}</strong>（下一輪替）</div>` : '';
@@ -563,10 +563,10 @@ function toggleCheck(id) {
 }
 
 async function submitOrder() {
-  const { fixed, rotating, nextItem } = state.items;
+  const { fixed, rotatingAll } = state.items;
   const items = [];
 
-  const teaList = [...rotating, ...(nextItem ? [nextItem] : []), ...fixed];
+  const teaList = [...rotatingAll, ...fixed];
   teaList.forEach(item => {
     const el = document.getElementById(`tea_${item.name.replace(/\W/g,'_')}`);
     if (el && el.value && Number(el.value) > 0)
