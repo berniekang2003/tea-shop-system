@@ -279,6 +279,8 @@ async function loadAll() {
     ]);
     state.items = itemsData;
     state.inventory = invData.items || [];
+    state.invTodayUpdated = invData.todayUpdated || false;
+    state.invUpdateTime = invData.updateTime || '';
     state.order = orderData.found ? orderData : null;
     state.loaded = true;
     render();
@@ -330,8 +332,8 @@ function renderHome() {
   const { fixed, rotating, rotatingAll, nextItem } = state.items;
   const order = state.order;
 
-  const invDone = state.inventory.length > 0;
-  const invTime = invDone ? (state.inventory[0].time || '').split(' ')[1] || '' : '';
+  const invDone = state.invTodayUpdated;
+  const invTime = invDone ? (state.invUpdateTime || '').split(' ')[1] || '' : '';
   const orderDone = !!order;
   const shippingDone = order && (order.status === '已出貨' || order.status === '已完結');
   const arrivalDone = order && order.status === '已完結';
@@ -482,6 +484,8 @@ async function saveInventory() {
   if (res.ok) {
     const invRes = await apiGet('getInventory', { date: todayStr() });
     state.inventory = invRes.items || [];
+    state.invTodayUpdated = invRes.todayUpdated || false;
+    state.invUpdateTime = invRes.updateTime || '';
     showToast('庫存登記完成 ✓');
     go('home');
   } else {
