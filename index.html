@@ -501,12 +501,21 @@ function renderOrder() {
   const rotHint = nextItem
     ? `<div class="rot-hint">🔄 系統建議補入：<strong>${nextItem.name}</strong>（下一輪替）</div>` : '';
 
-  function teaRow(item, suggested = false) {
+  function teaRow(item) {
     const key = item.name.replace(/\W/g,'_');
-    return `<div class="field-row">
-      <span class="field-name">${item.name}${suggested ? '<span class="field-tag">輪替補入</span>' : ''}</span>
-      <input class="field-input ${suggested?'suggested':''}" type="number" min="0"
-        id="tea_${key}" value="${suggested?'1':''}" placeholder="0">
+    const isNext = nextItem && item.name === nextItem.name;
+    const isSoldOut = item.status === '售完';
+    const isActive = item.status === '現售';
+    let tagHtml = '';
+    let inputCls = '';
+    let defaultVal = '';
+    let opacity = '';
+    if (isNext) { tagHtml = '<span class="field-tag">建議補入</span>'; inputCls = 'suggested'; defaultVal = '1'; }
+    if (isSoldOut) { tagHtml = '<span style="font-size:11px;color:#8e8e93;margin-left:4px">售完</span>'; opacity = 'opacity:0.4;'; }
+    return `<div class="field-row" style="${opacity}">
+      <span class="field-name">${item.name}${tagHtml}</span>
+      <input class="field-input ${inputCls}" type="number" min="0"
+        id="tea_${key}" value="${defaultVal}" placeholder="0" ${isSoldOut?'disabled':''}>
       <span class="field-unit">桶</span>
     </div>`;
   }
@@ -534,10 +543,8 @@ function renderOrder() {
     </div>
     <div class="content">
       <div class="section-title">傳統原味（桶）</div>
-      ${rotHint}
       <div class="card">
-        ${rotating.map(r => teaRow(r)).join('')}
-        ${nextItem ? teaRow(nextItem, true) : ''}
+        ${rotatingAll.map(r => teaRow(r)).join('')}
       </div>
       <div class="section-title">固定茶品（桶）</div>
       <div class="card">${fixed.map(f => teaRow(f)).join('')}</div>
