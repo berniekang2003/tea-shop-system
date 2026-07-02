@@ -355,7 +355,7 @@ function renderHome() {
     const pct = qty !== null ? qty / item.cups : 0;
     const cls = levelClass(pct);
     const fillPct = Math.round(pct * 100);
-    const soldoutBtn = item.status === '現售'
+    const soldoutBtn = (item.status === '現售' && (qty === null || qty === 0))
       ? `<button class="soldout-btn" onclick="markSoldOut('${item.name}')">售完</button>` : '';
 
     return `<div class="row" style="flex-direction:column;align-items:flex-start">
