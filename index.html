@@ -289,7 +289,7 @@ async function loadAll() {
   }
 }
 
-function getInvItem(name) { return state.inventory.find(i => i.name === name); }
+function getInvItem(name) { return state.inventory.find(i => i.name.trim() === name.trim()); }
 
 function calcDaysOpen(openDate) {
   if (!openDate) return null;
@@ -444,7 +444,7 @@ function renderInventory() {
 
   function invRow(item, idx) {
     const existing = getInvItem(item.name);
-    const qty = existing ? existing.qty : '';
+    const qty = '';
     const openDate = existing ? (existing.openDate || '').replace(/\//g,'-') : '';
     return `<div class="field-row" style="flex-wrap:wrap;gap:6px">
       <div style="width:100%;display:flex;align-items:center;justify-content:space-between">
