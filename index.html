@@ -285,7 +285,7 @@ async function loadAll() {
     state.loaded = true;
     render();
   } catch(e) {
-    document.getElementById('app').innerHTML = '<div class="loading">載入失敗，請重新整理頁面</div>';
+    document.getElementById('app').innerHTML = `<div class="loading">載入失敗：${e.message}<br><br>請截圖這個畫面</div>`;
   }
 }
 
