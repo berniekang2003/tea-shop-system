@@ -520,16 +520,25 @@ async function saveInventory() {
 
 // ── 叫貨申請 ──────────────────────────────────
 function renderOrder() {
-  const { fixed, rotating, rotatingAll, nextItem } = state.items;
+  const { fixed, rotatingAll } = state.items;
+
+  function invStatus(name) {
+    const inv = getInvItem(name);
+    if (!inv) return 'new';
+    return Number(inv.qty) > 0 ? 'active' : 'soldout';
+  }
+
+  const nonPaused = rotatingAll.filter(r => !r.paused);
+  let nextItem = nonPaused.find(r => invStatus(r.name) === 'new') || null;
+  if (!nextItem) nextItem = nonPaused.find(r => invStatus(r.name) === 'soldout') || null;
 
   const rotHint = nextItem
     ? `<div class="rot-hint">🔄 系統建議補入：<strong>${nextItem.name}</strong>（下一輪替）</div>` : '';
 
-  function teaRow(item) {
-    const key = item.name.replace(/\W/g,'_');
+  function teaRow(item, idx) {
+    const st = invStatus(item.name);
     const isNext = nextItem && item.name === nextItem.name;
-    const isSoldOut = item.status === '售完';
-    const isActive = item.status === '現售';
+    const isSoldOut = st === 'soldout';
     let tagHtml = '';
     let inputCls = '';
     let defaultVal = '';
@@ -539,7 +548,7 @@ function renderOrder() {
     return `<div class="field-row" style="${opacity}">
       <span class="field-name">${item.name}${tagHtml}</span>
       <input class="field-input ${inputCls}" type="number" min="0"
-        id="tea_${key}" value="${defaultVal}" placeholder="0" ${isSoldOut?'disabled':''}>
+        id="tea_${idx}" value="${defaultVal}" placeholder="0" ${isSoldOut?'disabled':''}>
       <span class="field-unit">桶</span>
     </div>`;
   }
@@ -568,10 +577,10 @@ function renderOrder() {
     <div class="content">
       <div class="section-title">傳統原味（桶）</div>
       <div class="card">
-        ${rotatingAll.map(r => teaRow(r)).join('')}
+        ${rotatingAll.map((r, i) => teaRow(r, i)).join('')}
       </div>
       <div class="section-title">固定茶品（桶）</div>
-      <div class="card">${fixed.map(f => teaRow(f)).join('')}</div>
+      <div class="card">${fixed.map((f, i) => teaRow(f, rotatingAll.length + i)).join('')}</div>
       <div class="section-title">配料（勾選即出）</div>
       <div class="check-grid">${checkItems}</div>
       <div class="section-title" style="margin-top:16px">備品</div>
@@ -591,8 +600,8 @@ async function submitOrder() {
   const items = [];
 
   const teaList = [...rotatingAll, ...fixed];
-  teaList.forEach(item => {
-    const el = document.getElementById(`tea_${item.name.replace(/\W/g,'_')}`);
+  teaList.forEach((item, idx) => {
+    const el = document.getElementById(`tea_${idx}`);
     if (el && el.value && Number(el.value) > 0)
       items.push({ cat:'茶品', name: item.name, qty: Number(el.value) });
   });
