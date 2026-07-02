@@ -283,9 +283,13 @@ async function loadAll() {
     state.invUpdateTime = invData.updateTime || '';
     state.order = orderData.found ? orderData : null;
     state.loaded = true;
-    render();
+    try {
+      render();
+    } catch(re) {
+      document.getElementById('app').innerHTML = `<div class="loading">畫面錯誤：${re.message}<br><br>請截圖</div>`;
+    }
   } catch(e) {
-    document.getElementById('app').innerHTML = `<div class="loading">載入失敗：${e.message}<br><br>請截圖這個畫面</div>`;
+    document.getElementById('app').innerHTML = `<div class="loading">API錯誤：${e.message}<br><br>請截圖</div>`;
   }
 }
 
