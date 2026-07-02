@@ -309,6 +309,7 @@ function levelClass(pct) {
 function openDateLabel(openDate) {
   const days = calcDaysOpen(openDate);
   if (days === null) return '';
+  if (days < 0) return '<span class="open-ok">未來日期</span>';
   if (days === 0) return '<span class="open-today">今日開桶</span>';
   if (days >= 3) return `<span class="open-warn">開桶第 ${days} 天</span>`;
   return `<span class="open-ok">開桶第 ${days} 天</span>`;
