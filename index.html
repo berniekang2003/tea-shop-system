@@ -330,19 +330,30 @@ function renderNavbar(active) {
 // ── 主畫面 ────────────────────────────────────
 function renderHome() {
   const today = todayStr();
-  const { fixed, rotating, rotatingAll, nextItem } = state.items;
+  const { fixed, rotatingAll } = state.items;
   const order = state.order;
 
   const invDone = state.invTodayUpdated;
   const invTime = invDone ? (state.invUpdateTime || '').split(' ')[1] || '' : '';
   const orderDone = !!order;
-  const shippingDone = order && (order.status === '已出貨' || order.status === '已完結');
-  const arrivalDone = order && order.status === '已完結';
+
+  // 從庫存推導每個輪替品項的狀態
+  function invStatus(name) {
+    const inv = getInvItem(name);
+    if (!inv) return 'new';           // 從未登記 → 候補
+    return Number(inv.qty) > 0 ? 'active' : 'soldout';
+  }
+
+  // 計算下一輪替建議：優先從未登記，若全部都登記過則從售完中循環
+  const nonPaused = rotatingAll.filter(r => !r.paused);
+  let nextItem = nonPaused.find(r => invStatus(r.name) === 'new') || null;
+  if (!nextItem) nextItem = nonPaused.find(r => invStatus(r.name) === 'soldout') || null;
 
   const rotStrip = rotatingAll.map(r => {
-    const isNext = nextItem && r.name === nextItem.name && r.status !== '現售';
-    const cls = r.status === '現售' ? 'active' : isNext ? 'next' : 'standby';
-    return `<span class="rot-chip ${cls}">${r.name}${isNext?' ↓':''}</span>`;
+    const st = invStatus(r.name);
+    const isNext = nextItem && r.name === nextItem.name && st !== 'active';
+    const cls = st === 'active' ? 'active' : isNext ? 'next' : 'standby';
+    return `<span class="rot-chip ${cls} ${r.paused?'paused':''}">${r.name}${isNext?' ↓':''}</span>`;
   }).join('');
 
   const nextHint = nextItem
@@ -352,15 +363,19 @@ function renderHome() {
     const inv = getInvItem(item.name);
     const qty = inv ? Number(inv.qty) : null;
     const openDate = inv ? inv.openDate : '';
-    const pct = qty !== null ? qty / item.cups : 0;
-    const cls = levelClass(pct);
+    const pct = qty !== null && qty > 0 ? qty / item.cups : 0;
+    const cls = qty !== null && qty > 0 ? levelClass(pct) : 'low';
     const fillPct = Math.round(pct * 100);
-    const soldoutBtn = (item.status === '現售' && (qty === null || qty === 0))
-      ? `<button class="soldout-btn" onclick="markSoldOut('${item.name}')">售完</button>` : '';
+    const st = invStatus(item.name);
+    const statusTag = st === 'soldout'
+      ? '<span style="font-size:11px;background:#ff3b30;color:#fff;border-radius:4px;padding:1px 6px;margin-left:4px">售完</span>'
+      : st === 'new'
+      ? '<span style="font-size:11px;background:#8e8e93;color:#fff;border-radius:4px;padding:1px 6px;margin-left:4px">候補</span>'
+      : '';
 
     return `<div class="row" style="flex-direction:column;align-items:flex-start">
-      <div style="display:flex;align-items:baseline;justify-content:space-between;width:100%">
-        <span style="font-size:15px;font-weight:500">${item.name} ${soldoutBtn}</span>
+      <div style="width:100%;display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:15px;font-weight:500">${item.name}${statusTag}</span>
         ${openDate ? openDateLabel(openDate) : '<span class="open-ok">未填</span>'}
       </div>
       <div class="level-wrap" style="width:100%">
@@ -398,7 +413,7 @@ function renderHome() {
       <div class="section-title">傳統原味輪替</div>
       <div class="rot-strip">${rotStrip}</div>
       ${nextHint}
-      <div class="card">${rotatingAll.filter(r => !r.paused).map(teaCard).join('') || '<div style="padding:12px 0;color:#8e8e93">無現售品項</div>'}</div>
+      <div class="card">${nonPaused.map(teaCard).join('') || '<div style="padding:12px 0;color:#8e8e93">無品項</div>'}</div>
 
       <div class="section-title">固定茶品</div>
       <div class="card">${fixed.map(teaCard).join('')}</div>
