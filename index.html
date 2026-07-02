@@ -340,6 +340,8 @@ function renderHome() {
   const invDone = state.invTodayUpdated;
   const invTime = invDone ? (state.invUpdateTime || '').split(' ')[1] || '' : '';
   const orderDone = !!order;
+  const shippingDone = order && (order.status === '已出貨' || order.status === '已完結');
+  const arrivalDone = order && order.status === '已完結';
 
   // 從庫存推導每個輪替品項的狀態
   function invStatus(name) {
