@@ -423,7 +423,8 @@ function renderHome() {
 
 // ── 庫存登記 ──────────────────────────────────
 function renderInventory() {
-  const { fixed, rotating } = state.items;
+  const { fixed, rotating, rotatingAll } = state.items;
+  const activeRotating = rotatingAll.filter(r => !r.paused);
 
   function invRow(item) {
     const existing = getInvItem(item.name);
@@ -456,7 +457,7 @@ function renderInventory() {
     </div>
     <div class="content">
       <div class="section-title">傳統原味（杯）</div>
-      <div class="card">${rotating.map(invRow).join('')}</div>
+      <div class="card">${activeRotating.map(invRow).join('')}</div>
       <div class="section-title">固定茶品（杯）</div>
       <div class="card">${fixed.map(invRow).join('')}</div>
       <button class="btn-primary" onclick="saveInventory()">儲存庫存登記</button>
@@ -464,8 +465,9 @@ function renderInventory() {
 }
 
 async function saveInventory() {
-  const { fixed, rotating } = state.items;
-  const allItems = [...rotating, ...fixed];
+  const { fixed, rotatingAll } = state.items;
+  const activeRotating = rotatingAll.filter(r => !r.paused);
+  const allItems = [...activeRotating, ...fixed];
   const items = [];
 
   for (const item of allItems) {
