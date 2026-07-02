@@ -397,7 +397,7 @@ function renderHome() {
       <div class="section-title">傳統原味輪替</div>
       <div class="rot-strip">${rotStrip}</div>
       ${nextHint}
-      <div class="card">${rotating.map(teaCard).join('') || '<div style="padding:12px 0;color:#8e8e93">無現售品項</div>'}</div>
+      <div class="card">${rotatingAll.filter(r => !r.paused).map(teaCard).join('') || '<div style="padding:12px 0;color:#8e8e93">無現售品項</div>'}</div>
 
       <div class="section-title">固定茶品</div>
       <div class="card">${fixed.map(teaCard).join('')}</div>
@@ -426,23 +426,22 @@ function renderInventory() {
   const { fixed, rotating, rotatingAll } = state.items;
   const activeRotating = rotatingAll.filter(r => !r.paused);
 
-  function invRow(item) {
+  function invRow(item, idx) {
     const existing = getInvItem(item.name);
     const qty = existing ? existing.qty : '';
     const openDate = existing ? (existing.openDate || '').replace(/\//g,'-') : '';
-    const key = item.name.replace(/\W/g,'_');
     return `<div class="field-row" style="flex-wrap:wrap;gap:6px">
       <div style="width:100%;display:flex;align-items:center;justify-content:space-between">
         <span class="field-name">${item.name}</span>
         <div style="display:flex;align-items:center;gap:6px">
           <input class="field-input" type="number" min="0" max="${item.cups}"
-            id="qty_${key}" value="${qty}" placeholder="0">
+            id="qty_${idx}" value="${qty}" placeholder="0">
           <span class="field-unit">杯</span>
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:6px;padding-bottom:4px">
         <span style="font-size:12px;color:#8e8e93">開桶日：</span>
-        <input type="date" class="date-input" id="open_${key}" value="${openDate}">
+        <input type="date" class="date-input" id="open_${idx}" value="${openDate}">
       </div>
     </div>`;
   }
@@ -457,9 +456,9 @@ function renderInventory() {
     </div>
     <div class="content">
       <div class="section-title">傳統原味（杯）</div>
-      <div class="card">${activeRotating.map(invRow).join('')}</div>
+      <div class="card">${activeRotating.map((item, i) => invRow(item, i)).join('')}</div>
       <div class="section-title">固定茶品（杯）</div>
-      <div class="card">${fixed.map(invRow).join('')}</div>
+      <div class="card">${fixed.map((item, i) => invRow(item, activeRotating.length + i)).join('')}</div>
       <button class="btn-primary" onclick="saveInventory()">儲存庫存登記</button>
     </div>`;
 }
@@ -470,10 +469,10 @@ async function saveInventory() {
   const allItems = [...activeRotating, ...fixed];
   const items = [];
 
-  for (const item of allItems) {
-    const key = item.name.replace(/\W/g,'_');
-    const qtyEl = document.getElementById(`qty_${key}`);
-    const openEl = document.getElementById(`open_${key}`);
+  for (let idx = 0; idx < allItems.length; idx++) {
+    const item = allItems[idx];
+    const qtyEl = document.getElementById(`qty_${idx}`);
+    const openEl = document.getElementById(`open_${idx}`);
     const qty = qtyEl ? qtyEl.value : '';
     const openDate = openEl ? openEl.value.replace(/-/g,'/') : '';
     if (qty !== '') items.push({ name: item.name, qty: Number(qty), openDate });
