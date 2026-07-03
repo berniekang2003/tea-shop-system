@@ -412,7 +412,7 @@ function renderHome() {
         <button class="action-btn ${orderDone?'done':''}" onclick="go(${orderDone ? "'ordersheet'" : "'order'"})">
           <div class="icon">📦</div>
           <div class="label">叫貨申請</div>
-          <div class="sublabel">${orderDone ? '✓ ' + ((order.shippingTime || order.requestTime || '').split(' ')[1] || '') + ' 送出' : '尚未申請'}</div>
+          <div class="sublabel">${orderDone ? '✓ ' + ((order.requestTime || '').split(' ')[1] || '') + ' 送出' : '尚未申請'}</div>
         </button>
       </div>
 
