@@ -655,10 +655,11 @@ function renderOrderSheet() {
     const shipped = item.shipped !== '' ? item.shipped : req;
     return `<div class="field-row">
       <span class="field-name">${item.name}</span>
-      <span class="mon-req-val">${req}${unit}</span>
+      <input class="mon-input" type="number" min="0" id="req_${item.name}"
+        value="${req}" ${canShip ? '' : 'disabled'} style="width:48px;text-align:center">
       <span class="mon-arrow"> → </span>
       <input class="mon-input" type="number" min="0" id="ship_${item.name}"
-        value="${shipped}" ${canShip ? `oninput="checkAdj('ship_${item.name}',${req})"` : 'disabled'}>
+        value="${shipped}" ${canShip ? `oninput="checkAdj('ship_${item.name}',document.getElementById('req_${item.name}').value)"` : 'disabled'}>
       <span class="field-unit">${unit}</span>
     </div>`;
   }
@@ -714,8 +715,13 @@ async function confirmShipping() {
   const items = order.items
     .filter(i => i.cat !== '配料')
     .map(i => {
-      const el = document.getElementById(`ship_${i.name}`);
-      return { name: i.name, shipped: el ? Number(el.value) : i.requested };
+      const shipEl = document.getElementById(`ship_${i.name}`);
+      const reqEl  = document.getElementById(`req_${i.name}`);
+      return {
+        name: i.name,
+        requested: reqEl ? Number(reqEl.value) : i.requested,
+        shipped: shipEl ? Number(shipEl.value) : i.requested,
+      };
     });
 
   const btn = document.querySelector('.btn-primary');
