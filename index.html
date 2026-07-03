@@ -409,10 +409,10 @@ function renderHome() {
           <div class="label">庫存登記</div>
           <div class="sublabel">${invDone ? '✓ '+invTime+' 完成' : '尚未填寫'}</div>
         </button>
-        <button class="action-btn ${orderDone?'done':''}" onclick="go(${orderDone ? "'ordersheet'" : "'order'"})">
+        <button class="action-btn ${orderDone?'done':''}" onclick="go(${!orderDone ? "'order'" : order.status==='已申請' ? "'order'" : "'ordersheet'"})">
           <div class="icon">📦</div>
           <div class="label">叫貨申請</div>
-          <div class="sublabel">${orderDone ? '✓ ' + ((order.shippingTime || order.requestTime || '').split(' ')[1] || '') + ' 送出' : '尚未申請'}</div>
+          <div class="sublabel">${!orderDone ? '尚未申請' : order.status==='已申請' ? '✓ '+((order.requestTime||'').split(' ')[1]||'')+' 申請中（可更新）' : '✓ '+((order.requestTime||'').split(' ')[1]||'')+' 送出'}</div>
         </button>
       </div>
 
@@ -521,6 +521,8 @@ async function saveInventory() {
 // ── 叫貨申請 ──────────────────────────────────
 function renderOrder() {
   const { fixed, rotatingAll } = state.items;
+  const isEdit = !!(state.order && state.order.status === '已申請');
+  const existingOrder = isEdit ? state.order : null;
 
   function invStatus(name) {
     const inv = getInvItem(name);
@@ -535,15 +537,22 @@ function renderOrder() {
   const rotHint = nextItem
     ? `<div class="rot-hint">🔄 系統建議補入：<strong>${nextItem.name}</strong>（下一輪替）</div>` : '';
 
+  function getExistingQty(name, cat) {
+    if (!existingOrder) return null;
+    const found = existingOrder.items.find(i => i.name === name && i.cat === cat);
+    return found ? found.requested : null;
+  }
+
   function teaRow(item, idx) {
     const st = invStatus(item.name);
     const isNext = nextItem && item.name === nextItem.name;
     const isSoldOut = st === 'soldout';
+    const existQty = getExistingQty(item.name, '茶品');
     let tagHtml = '';
     let inputCls = '';
-    let defaultVal = '';
+    let defaultVal = existQty !== null ? existQty : (isNext ? '1' : '');
     let opacity = '';
-    if (isNext) { tagHtml = '<span class="field-tag">建議補入</span>'; inputCls = 'suggested'; defaultVal = '1'; }
+    if (isNext && existQty === null) { tagHtml = '<span class="field-tag">建議補入</span>'; inputCls = 'suggested'; }
     if (isSoldOut) { tagHtml = '<span style="font-size:11px;color:#8e8e93;margin-left:4px">售完</span>'; opacity = 'opacity:0.4;'; }
     return `<div class="field-row" style="${opacity}">
       <span class="field-name">${item.name}${tagHtml}</span>
@@ -553,28 +562,38 @@ function renderOrder() {
     </div>`;
   }
 
-  const checkItems = INGREDIENTS.map(i => `
-    <label class="check-item" id="chk_${i}" onclick="toggleCheck('chk_${i}')">
-      <div class="check-box" id="chkbox_${i}"></div>
+  const checkItems = INGREDIENTS.map(i => {
+    const checked = existingOrder ? existingOrder.items.some(x => x.name === i && x.cat === '配料') : false;
+    return `
+    <label class="check-item ${checked?'checked':''}" id="chk_${i}" onclick="toggleCheck('chk_${i}')">
+      <div class="check-box" id="chkbox_${i}">${checked?'✓':''}</div>
       <span class="check-label">${i}</span>
-    </label>`).join('');
+    </label>`;
+  }).join('');
 
-  const supplyRows = SUPPLIES.map(s => `
+  const supplyRows = SUPPLIES.map(s => {
+    const existQty = getExistingQty(s, '備品');
+    return `
     <div class="field-row">
       <span class="field-name">${s}</span>
-      <input class="field-input" type="number" min="0" id="sup_${s}" placeholder="0">
+      <input class="field-input" type="number" min="0" id="sup_${s}" value="${existQty !== null ? existQty : ''}" placeholder="0">
       <span class="field-unit">${SUPPLY_UNITS[s]}</span>
-    </div>`).join('');
+    </div>`;
+  }).join('');
+
+  const requestTime = existingOrder ? (existingOrder.requestTime || '').split(' ')[1] || '' : '';
 
   return `
     <div class="topbar">
       <div class="topbar-inner">
         <button class="back-btn" onclick="back()">← 返回</button>
-        <div class="topbar-title">叫貨申請</div>
+        <div class="topbar-title">${isEdit ? '更新叫貨申請' : '叫貨申請'}</div>
         <div style="width:48px"></div>
       </div>
+      ${isEdit ? `<div class="topbar-sub">上次申請時間：${requestTime}</div>` : ''}
     </div>
     <div class="content">
+      ${rotHint}
       <div class="section-title">傳統原味（桶）</div>
       <div class="card">
         ${rotatingAll.map((r, i) => teaRow(r, i)).join('')}
@@ -585,7 +604,7 @@ function renderOrder() {
       <div class="check-grid">${checkItems}</div>
       <div class="section-title" style="margin-top:16px">備品</div>
       <div class="card">${supplyRows}</div>
-      <button class="btn-primary" onclick="submitOrder()">送出叫貨申請</button>
+      <button class="btn-primary" onclick="${isEdit ? 'updateOrder()' : 'submitOrder()'}">${isEdit ? '更新叫貨' : '送出叫貨申請'}</button>
     </div>`;
 }
 
@@ -630,6 +649,42 @@ async function submitOrder() {
   } else {
     showToast('送出失敗：' + (res.error || ''));
     if (btn) { btn.disabled = false; btn.textContent = '送出叫貨申請'; }
+  }
+}
+
+async function updateOrder() {
+  const { fixed, rotatingAll } = state.items;
+  const order = state.order;
+  const items = [];
+
+  const teaList = [...rotatingAll, ...fixed];
+  teaList.forEach((item, idx) => {
+    const el = document.getElementById(`tea_${idx}`);
+    items.push({ cat:'茶品', name: item.name, qty: el ? Number(el.value) || 0 : 0 });
+  });
+
+  INGREDIENTS.forEach(i => {
+    if (document.getElementById(`chk_${i}`)?.classList.contains('checked'))
+      items.push({ cat:'配料', name: i, qty: 1 });
+  });
+
+  SUPPLIES.forEach(s => {
+    const el = document.getElementById(`sup_${s}`);
+    items.push({ cat:'備品', name: s, qty: el ? Number(el.value) || 0 : 0 });
+  });
+
+  const btn = document.querySelector('.btn-primary');
+  if (btn) { btn.disabled = true; btn.textContent = '更新中...'; }
+
+  const res = await apiPost({ action: 'updateOrder', orderId: order.orderId, items });
+  if (res.ok) {
+    const orderRes = await apiGet('getOrder', { date: todayStr() });
+    state.order = orderRes.found ? orderRes : null;
+    showToast('叫貨申請已更新 ✓');
+    go('ordersheet');
+  } else {
+    showToast('更新失敗：' + (res.error || ''));
+    if (btn) { btn.disabled = false; btn.textContent = '更新叫貨'; }
   }
 }
 
