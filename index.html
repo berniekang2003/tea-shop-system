@@ -953,17 +953,77 @@ async function loadHistory() {
   };
 
   el.innerHTML = `<div class="card" style="padding:0 16px">${records.map(r => `
-    <div class="hist-row">
-      <div style="flex:1">
-        <div class="hist-date">${r.date}</div>
-        <div class="hist-meta">
-          申請 ${(r.requestTime||'').split(' ')[1]||'—'}
-          ${r.shippingTime ? '・出貨 '+(r.shippingTime||'').split(' ')[1] : ''}
-          ${r.arrivalTime  ? '・到貨 '+(r.arrivalTime||'').split(' ')[1]  : ''}
+    <div>
+      <div class="hist-row" style="cursor:pointer" onclick="toggleHistDetail('${r.orderId}', '${r.date}')">
+        <div style="flex:1">
+          <div class="hist-date">${r.date}</div>
+          <div class="hist-meta">
+            申請 ${(r.requestTime||'').split(' ')[1]||'—'}
+            ${r.shippingTime ? '・出貨 '+(r.shippingTime||'').split(' ')[1] : ''}
+            ${r.arrivalTime  ? '・到貨 '+(r.arrivalTime||'').split(' ')[1]  : ''}
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          ${statusMap[r.status]||''}
+          <span id="hist-arrow-${r.orderId}" style="color:#8e8e93;font-size:12px">▼</span>
         </div>
       </div>
-      ${statusMap[r.status]||''}
+      <div id="hist-detail-${r.orderId}" style="display:none;padding:8px 0 12px;border-top:1px solid #f2f2f7">
+        <div style="color:#8e8e93;font-size:13px">載入中...</div>
+      </div>
     </div>`).join('')}</div>`;
+}
+
+async function toggleHistDetail(orderId, date) {
+  const detail = document.getElementById(`hist-detail-${orderId}`);
+  const arrow  = document.getElementById(`hist-arrow-${orderId}`);
+  if (!detail) return;
+
+  if (detail.style.display !== 'none') {
+    detail.style.display = 'none';
+    arrow.textContent = '▼';
+    return;
+  }
+
+  detail.style.display = 'block';
+  arrow.textContent = '▲';
+
+  if (detail.dataset.loaded) return;
+  detail.dataset.loaded = '1';
+
+  const res = await apiGet('getOrder', { date });
+  if (!res.found || !res.items || !res.items.length) {
+    detail.innerHTML = '<div style="color:#8e8e93;font-size:13px">無明細資料</div>';
+    return;
+  }
+
+  const teaItems = res.items.filter(i => i.cat === '茶品' && Number(i.requested) > 0);
+  const ingItems = res.items.filter(i => i.cat === '配料');
+  const supItems = res.items.filter(i => i.cat === '備品' && Number(i.requested) > 0);
+
+  let html = '';
+  if (teaItems.length) {
+    html += `<div style="font-size:12px;color:#8e8e93;margin-bottom:4px">茶品</div>`;
+    html += teaItems.map(i => `
+      <div style="display:flex;justify-content:space-between;font-size:14px;padding:3px 0">
+        <span>${i.name}</span>
+        <span style="color:#007aff">${i.requested} 桶${i.shipped!==''&&i.shipped!=i.requested?' → '+i.shipped+' 桶':''}</span>
+      </div>`).join('');
+  }
+  if (ingItems.length) {
+    html += `<div style="font-size:12px;color:#8e8e93;margin:8px 0 4px">配料</div>`;
+    html += `<div style="font-size:14px;color:#3c3c43">${ingItems.map(i=>i.name).join('、')}</div>`;
+  }
+  if (supItems.length) {
+    html += `<div style="font-size:12px;color:#8e8e93;margin:8px 0 4px">備品</div>`;
+    html += supItems.map(i => `
+      <div style="display:flex;justify-content:space-between;font-size:14px;padding:3px 0">
+        <span>${i.name}</span>
+        <span style="color:#007aff">${i.requested}</span>
+      </div>`).join('');
+  }
+
+  detail.innerHTML = html || '<div style="color:#8e8e93;font-size:13px">無明細資料</div>';
 }
 
 // ── 標記售完 ──────────────────────────────────
