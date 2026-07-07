@@ -150,6 +150,12 @@ body {
 .check-label { font-size: 14px; }
 .check-item.checked .check-label { color: #007aff; font-weight: 500; }
 
+.btn-secondary {
+  display: block; width: calc(100% - 32px); margin: 0 16px; padding: 16px;
+  border-radius: 14px; border: 1.5px solid #007aff; background: #fff;
+  color: #007aff; font-size: 17px; font-weight: 600; cursor: pointer;
+}
+.btn-secondary:active { background: #f0f5ff; }
 .btn-primary {
   width: 100%; padding: 15px; background: #007aff; color: #fff;
   border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 16px;
@@ -409,7 +415,7 @@ function renderHome() {
           <div class="label">庫存登記</div>
           <div class="sublabel">${invDone ? '✓ '+invTime+' 完成' : '尚未填寫'}</div>
         </button>
-        <button class="action-btn ${orderDone?'done':''}" onclick="go(${!orderDone ? "'order'" : order.status==='已申請' ? "'order'" : "'ordersheet'"})">
+        <button class="action-btn ${orderDone?'done':''}" onclick="go(${!orderDone ? "'order'" : (order.status==='已申請'||order.status==='已出貨') ? "'order'" : "'ordersheet'"})">
           <div class="icon">📦</div>
           <div class="label">叫貨申請</div>
           <div class="sublabel">${!orderDone ? '尚未申請' : order.status==='已申請' ? '✓ '+((order.requestTime||'').split(' ')[1]||'')+' 申請中（可更新）' : '✓ '+((order.requestTime||'').split(' ')[1]||'')+' 送出'}</div>
@@ -521,7 +527,7 @@ async function saveInventory() {
 // ── 叫貨申請 ──────────────────────────────────
 function renderOrder() {
   const { fixed, rotatingAll } = state.items;
-  const isEdit = !!(state.order && state.order.status === '已申請');
+  const isEdit = !!(state.order && (state.order.status === '已申請' || state.order.status === '已出貨'));
   const existingOrder = isEdit ? state.order : null;
 
   function invStatus(name) {
@@ -752,7 +758,8 @@ function renderOrderSheet() {
         <p style="font-size:12px;color:#8e8e93;margin-top:8px;text-align:center">橘色 = 出貨量已調整</p>
         <button class="btn-primary" onclick="confirmShipping()">確認出貨</button>` : ''}
       ${canArrive ? `
-        <button class="btn-primary" style="background:#34c759;margin-top:16px" onclick="go('arrival')">確認到貨</button>` : ''}
+        <button class="btn-secondary" style="margin-top:16px" onclick="go('order')">修改叫貨</button>
+        <button class="btn-primary" style="background:#34c759;margin-top:8px" onclick="go('arrival')">確認到貨</button>` : ''}
       ${order.status === '已完結' ? `
         <div style="text-align:center;padding:16px;color:#34c759;font-weight:500">✓ 此單已完結</div>` : ''}
     </div>
