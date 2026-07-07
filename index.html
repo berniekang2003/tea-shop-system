@@ -559,11 +559,11 @@ function renderOrder() {
     let defaultVal = existQty !== null ? existQty : (isNext ? '1' : '');
     let opacity = '';
     if (isNext && existQty === null) { tagHtml = '<span class="field-tag">建議補入</span>'; inputCls = 'suggested'; }
-    if (isSoldOut) { tagHtml = '<span style="font-size:11px;color:#8e8e93;margin-left:4px">售完</span>'; opacity = 'opacity:0.4;'; }
+    if (isSoldOut) { tagHtml = '<span style="font-size:11px;color:#8e8e93;margin-left:4px">售完</span>'; opacity = 'opacity:0.5;'; }
     return `<div class="field-row" style="${opacity}">
       <span class="field-name">${item.name}${tagHtml}</span>
       <input class="field-input ${inputCls}" type="number" min="0"
-        id="tea_${idx}" value="${defaultVal}" placeholder="0" ${isSoldOut?'disabled':''}>
+        id="tea_${idx}" value="${defaultVal}" placeholder="0">
       <span class="field-unit">桶</span>
     </div>`;
   }
