@@ -150,6 +150,11 @@ body {
 .check-label { font-size: 14px; }
 .check-item.checked .check-label { color: #007aff; font-weight: 500; }
 
+.waste-type-btn {
+  flex:1; padding:10px; border-radius:10px; border:1.5px solid #e5e5ea;
+  background:#fff; color:#8e8e93; font-size:15px; font-weight:500; cursor:pointer;
+}
+.waste-type-btn.active { border-color:#007aff; color:#007aff; background:#f0f5ff; }
 .btn-secondary {
   display: block; width: calc(100% - 32px); margin: 0 16px; padding: 16px;
   border-radius: 14px; border: 1.5px solid #007aff; background: #fff;
@@ -330,6 +335,7 @@ function renderNavbar(active) {
     { id:'home', label:'今日', icon:'🏠' },
     { id:'ordersheet', label:'叫貨單', icon:'📋' },
     { id:'history', label:'歷史', icon:'🕐' },
+    { id:'waste',   label:'報廢', icon:'🗑️' },
   ];
   return `<div class="navbar">${items.map(i =>
     `<button class="nav-btn ${active===i.id?'active':''}" onclick="go('${i.id}')">
@@ -1047,6 +1053,93 @@ async function markSoldOut(name) {
   }
 }
 
+// ── 報廢記錄 ──────────────────────────────────
+function renderWaste() {
+  return `
+    <div class="topbar"><div class="topbar-inner"><div class="topbar-title">報廢記錄</div></div></div>
+    <div class="content">
+      <div class="section-title">新增報廢</div>
+      <div class="card" style="padding:16px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;gap:8px">
+          <button id="waste-type-tea" class="waste-type-btn active" onclick="setWasteType('茶品')">茶品</button>
+          <button id="waste-type-ing" class="waste-type-btn" onclick="setWasteType('配料')">配料</button>
+        </div>
+        <div>
+          <div style="font-size:13px;color:#8e8e93;margin-bottom:6px">品項</div>
+          <select id="waste-item" style="width:100%;padding:10px;border-radius:10px;border:1px solid #e5e5ea;font-size:15px;background:#fff">
+            ${[...state.items.rotatingAll,...state.items.fixed].map(i=>`<option value="${i.name}">${i.name}</option>`).join('')}
+          </select>
+        </div>
+        <div id="waste-qty-row">
+          <div style="font-size:13px;color:#8e8e93;margin-bottom:6px">數量（桶）</div>
+          <input id="waste-qty" type="number" min="1" value="1" style="width:80px;padding:10px;border-radius:10px;border:1px solid #e5e5ea;font-size:15px;text-align:center">
+        </div>
+        <div>
+          <div style="font-size:13px;color:#8e8e93;margin-bottom:6px">報廢原因</div>
+          <input id="waste-reason" type="text" placeholder="例：過期、品質異常…" style="width:100%;padding:10px;border-radius:10px;border:1px solid #e5e5ea;font-size:15px;box-sizing:border-box">
+        </div>
+        <button class="btn-primary" onclick="submitWaste()">送出報廢</button>
+      </div>
+      <div class="section-title" style="margin-top:16px">歷史報廢紀錄</div>
+      <div id="waste-history"><div class="loading">載入中...</div></div>
+    </div>
+    ${renderNavbar('waste')}`;
+}
+
+let wasteType = '茶品';
+
+function setWasteType(type) {
+  wasteType = type;
+  const { rotatingAll, fixed } = state.items;
+  const items = type === '茶品'
+    ? [...rotatingAll, ...fixed]
+    : INGREDIENTS.map(n => ({ name: n }));
+  document.getElementById('waste-item').innerHTML = items.map(i => `<option value="${i.name}">${i.name}</option>`).join('');
+  document.getElementById('waste-qty-row').style.display = type === '茶品' ? '' : 'none';
+  document.getElementById('waste-type-tea').classList.toggle('active', type === '茶品');
+  document.getElementById('waste-type-ing').classList.toggle('active', type === '配料');
+}
+
+async function submitWaste() {
+  const item   = document.getElementById('waste-item')?.value;
+  const qty    = wasteType === '茶品' ? Number(document.getElementById('waste-qty')?.value) || 0 : 1;
+  const reason = document.getElementById('waste-reason')?.value.trim();
+  if (!item) return;
+  const btn = document.querySelector('.btn-primary');
+  if (btn) { btn.disabled = true; btn.textContent = '送出中...'; }
+  const res = await apiPost({ action: 'addWaste', cat: wasteType, name: item, qty, reason });
+  if (res.ok) {
+    showToast('報廢記錄已送出 ✓');
+    document.getElementById('waste-reason').value = '';
+    document.getElementById('waste-qty').value = '1';
+    loadWasteHistory();
+  } else {
+    showToast('送出失敗：' + (res.error || ''));
+  }
+  if (btn) { btn.disabled = false; btn.textContent = '送出報廢'; }
+}
+
+async function loadWasteHistory() {
+  const el = document.getElementById('waste-history');
+  if (!el) return;
+  const res = await apiGet('getWasteHistory');
+  const records = res.records || [];
+  if (!records.length) { el.innerHTML = '<div class="loading">尚無報廢紀錄</div>'; return; }
+  const catColor = { '茶品':'#007aff', '配料':'#ff9500' };
+  el.innerHTML = `<div class="card" style="padding:0 16px">${records.map(r => `
+    <div class="hist-row">
+      <div style="flex:1">
+        <div style="font-size:15px;font-weight:500">${r.name}
+          <span style="font-size:12px;color:${catColor[r.cat]||'#8e8e93'};margin-left:4px">${r.cat}</span>
+          ${r.cat==='茶品'?`<span style="font-size:13px;color:#3c3c43;margin-left:4px">${r.qty} 桶</span>`:''}
+        </div>
+        <div style="font-size:12px;color:#8e8e93;margin-top:2px">
+          ${r.datetime||r.date}${r.reason?' ・ '+r.reason:''}
+        </div>
+      </div>
+    </div>`).join('')}</div>`;
+}
+
 // ── Render ────────────────────────────────────
 function render() {
   const app = document.getElementById('app');
@@ -1061,6 +1154,7 @@ function render() {
   else if (s === 'ordersheet') app.innerHTML = renderOrderSheet();
   else if (s === 'arrival')    app.innerHTML = renderArrival();
   else if (s === 'history')  { app.innerHTML = renderHistory(); loadHistory(); }
+  else if (s === 'waste')    { app.innerHTML = renderWaste();   loadWasteHistory(); }
   else if (s === 'settings')   app.innerHTML = renderSettings();
 }
 
