@@ -468,7 +468,7 @@ function renderInventory() {
       <div style="width:100%;display:flex;align-items:center;justify-content:space-between">
         <span class="field-name">${item.name}</span>
         <div style="display:flex;align-items:center;gap:6px">
-          <input class="field-input" type="text" inputmode="numeric" pattern="[0-9]*" min="0" max="${item.cups}"
+          <input class="field-input" type="tel" min="0" max="${item.cups}"
             id="qty_${idx}" value="${qty}" placeholder="0">
           <span class="field-unit">杯</span>
         </div>
@@ -568,7 +568,7 @@ function renderOrder() {
     if (isSoldOut) { tagHtml = '<span style="font-size:11px;color:#8e8e93;margin-left:4px">售完</span>'; opacity = 'opacity:0.5;'; }
     return `<div class="field-row" style="${opacity}">
       <span class="field-name">${item.name}${tagHtml}</span>
-      <input class="field-input ${inputCls}" type="text" inputmode="numeric" pattern="[0-9]*" min="0"
+      <input class="field-input ${inputCls}" type="tel" min="0"
         id="tea_${idx}" value="${defaultVal}" placeholder="0">
       <span class="field-unit">桶</span>
     </div>`;
@@ -588,7 +588,7 @@ function renderOrder() {
     return `
     <div class="field-row">
       <span class="field-name">${s}</span>
-      <input class="field-input" type="text" inputmode="numeric" pattern="[0-9]*" min="0" id="sup_${s}" value="${existQty !== null ? existQty : ''}" placeholder="0">
+      <input class="field-input" type="tel" min="0" id="sup_${s}" value="${existQty !== null ? existQty : ''}" placeholder="0">
       <span class="field-unit">${SUPPLY_UNITS[s]}</span>
     </div>`;
   }).join('');
@@ -722,10 +722,10 @@ function renderOrderSheet() {
     const shipped = item.shipped !== '' ? item.shipped : req;
     return `<div class="field-row">
       <span class="field-name">${item.name}</span>
-      <input class="mon-input" type="text" inputmode="numeric" pattern="[0-9]*" min="0" id="req_${item.name}"
+      <input class="mon-input" type="tel" min="0" id="req_${item.name}"
         value="${req}" ${canShip ? '' : 'disabled'} style="width:48px;text-align:center">
       <span class="mon-arrow"> → </span>
-      <input class="mon-input" type="text" inputmode="numeric" pattern="[0-9]*" min="0" id="ship_${item.name}"
+      <input class="mon-input" type="tel" min="0" id="ship_${item.name}"
         value="${shipped}" ${canShip ? `oninput="checkAdj('ship_${item.name}',document.getElementById('req_${item.name}').value)"` : 'disabled'}>
       <span class="field-unit">${unit}</span>
     </div>`;
@@ -824,7 +824,7 @@ function renderArrival() {
         <div style="font-size:15px">${i.name}</div>
         <div style="font-size:12px;color:#8e8e93">出貨 ${shipped} ${unit}</div>
       </div>
-      <input class="field-input" type="text" inputmode="numeric" pattern="[0-9]*" min="0" id="arrqty_${i.name}" value="${shipped}" style="width:56px">
+      <input class="field-input" type="tel" min="0" id="arrqty_${i.name}" value="${shipped}" style="width:56px">
       <span class="field-unit">${unit}</span>
     </div>`;
   }).join('');
@@ -1072,7 +1072,7 @@ function renderWaste() {
         </div>
         <div id="waste-qty-row">
           <div style="font-size:13px;color:#8e8e93;margin-bottom:6px">數量（杯）</div>
-          <input id="waste-qty" type="text" inputmode="numeric" pattern="[0-9]*" min="1" value="1" style="width:80px;padding:10px;border-radius:10px;border:1px solid #e5e5ea;font-size:15px;text-align:center">
+          <input id="waste-qty" type="tel" min="1" value="1" style="width:80px;padding:10px;border-radius:10px;border:1px solid #e5e5ea;font-size:15px;text-align:center">
         </div>
         <div>
           <div style="font-size:13px;color:#8e8e93;margin-bottom:6px">報廢原因</div>
