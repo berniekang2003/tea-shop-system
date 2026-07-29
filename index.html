@@ -1071,7 +1071,7 @@ function renderWaste() {
           </select>
         </div>
         <div id="waste-qty-row">
-          <div style="font-size:13px;color:#8e8e93;margin-bottom:6px">數量（桶）</div>
+          <div style="font-size:13px;color:#8e8e93;margin-bottom:6px">數量（杯）</div>
           <input id="waste-qty" type="number" min="1" value="1" style="width:80px;padding:10px;border-radius:10px;border:1px solid #e5e5ea;font-size:15px;text-align:center">
         </div>
         <div>
@@ -1095,14 +1095,13 @@ function setWasteType(type) {
     ? [...rotatingAll, ...fixed]
     : INGREDIENTS.map(n => ({ name: n }));
   document.getElementById('waste-item').innerHTML = items.map(i => `<option value="${i.name}">${i.name}</option>`).join('');
-  document.getElementById('waste-qty-row').style.display = type === '茶品' ? '' : 'none';
   document.getElementById('waste-type-tea').classList.toggle('active', type === '茶品');
   document.getElementById('waste-type-ing').classList.toggle('active', type === '配料');
 }
 
 async function submitWaste() {
   const item   = document.getElementById('waste-item')?.value;
-  const qty    = wasteType === '茶品' ? Number(document.getElementById('waste-qty')?.value) || 0 : 1;
+  const qty    = Number(document.getElementById('waste-qty')?.value) || 1;
   const reason = document.getElementById('waste-reason')?.value.trim();
   if (!item) return;
   const btn = document.querySelector('.btn-primary');
@@ -1131,7 +1130,7 @@ async function loadWasteHistory() {
       <div style="flex:1">
         <div style="font-size:15px;font-weight:500">${r.name}
           <span style="font-size:12px;color:${catColor[r.cat]||'#8e8e93'};margin-left:4px">${r.cat}</span>
-          ${r.cat==='茶品'?`<span style="font-size:13px;color:#3c3c43;margin-left:4px">${r.qty} 桶</span>`:''}
+          <span style="font-size:13px;color:#3c3c43;margin-left:4px">${r.qty} 杯</span>
         </div>
         <div style="font-size:12px;color:#8e8e93;margin-top:2px">
           ${r.datetime||r.date}${r.reason?' ・ '+r.reason:''}
