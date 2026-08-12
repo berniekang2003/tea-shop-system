@@ -972,9 +972,13 @@ function renderSettings() {
 async function togglePause(name, el) {
   const res = await apiPost({ action: 'togglePause', item: name });
   if (res.ok) {
-    const data = await apiGet('getAll', { date: todayStr() });
-    state.items = data.items;
-    state.order = data.order.found ? data.order : null;
+    const itemsCache = loadItemsCache();
+    if (itemsCache) {
+      const target = itemsCache.rotatingAll.find(r => r.name === name);
+      if (target) target.paused = !target.paused;
+      saveItemsCache(itemsCache);
+      state.items = itemsCache;
+    }
     showToast('設定已更新 ✓');
     render();
   } else {
@@ -1085,9 +1089,8 @@ async function markSoldOut(name) {
   if (!confirm(`確認「${name}」已售完？\n系統將切換至下一輪替品項。`)) return;
   const res = await apiPost({ action: 'markSoldOut', item: name });
   if (res.ok) {
-    const data = await apiGet('getAll', { date: todayStr() });
-    state.items = data.items;
-    state.order = data.order.found ? data.order : null;
+    const daily = await apiGet('getDailyData', { date: todayStr() });
+    if (!daily.error) { applyDaily(daily); saveCache(daily); }
     showToast(`${name} 已標記售完 ✓`);
     render();
   } else {
