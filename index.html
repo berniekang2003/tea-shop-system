@@ -283,23 +283,59 @@ function go(screen) {
 
 function back() { go(state.prevScreen || 'home'); }
 
+const CACHE_KEY = 'teasys_cache';
+
+function saveCache(data) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ date: todayStr(), data }));
+  } catch(e) {}
+}
+
+function loadCache() {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const { date, data } = JSON.parse(raw);
+    return date === todayStr() ? data : null;
+  } catch(e) { return null; }
+}
+
+function applyData(data) {
+  state.items = data.items;
+  state.inventory = data.inv.items || [];
+  state.invTodayUpdated = data.inv.todayUpdated || false;
+  state.invUpdateTime = data.inv.updateTime || '';
+  state.order = data.order.found ? data.order : null;
+}
+
 async function loadAll() {
+  const cached = loadCache();
+
+  if (cached) {
+    applyData(cached);
+    state.loaded = true;
+    try { render(); } catch(e) {}
+  }
+
   try {
     const data = await apiGet('getAll', { date: todayStr() });
-    if (data.error) throw new Error('getAll: ' + data.error);
-    state.items = data.items;
-    state.inventory = data.inv.items || [];
-    state.invTodayUpdated = data.inv.todayUpdated || false;
-    state.invUpdateTime = data.inv.updateTime || '';
-    state.order = data.order.found ? data.order : null;
+    if (data.error) throw new Error(data.error);
+    applyData(data);
+    saveCache(data);
     state.loaded = true;
-    try {
-      render();
-    } catch(re) {
-      document.getElementById('app').innerHTML = `<div class="loading">畫面錯誤：${re.message}<br><br>請截圖</div>`;
+    if (!cached) {
+      try { render(); } catch(re) {
+        document.getElementById('app').innerHTML = `<div class="loading">畫面錯誤：${re.message}<br><br>請截圖</div>`;
+      }
+    } else {
+      try { render(); } catch(e) {}
     }
   } catch(e) {
-    document.getElementById('app').innerHTML = `<div class="loading">API錯誤：${e.message}<br><br>請截圖</div>`;
+    if (!cached) {
+      document.getElementById('app').innerHTML = `<div class="loading">API錯誤：${e.message}<br><br>請截圖</div>`;
+    } else {
+      showToast('⚠️ 網路異常，顯示上次資料');
+    }
   }
 }
 
