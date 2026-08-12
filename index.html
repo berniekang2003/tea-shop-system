@@ -260,12 +260,16 @@ async function apiGet(action, params = {}) {
 }
 
 async function apiPost(body) {
-  const res = await fetch(API, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify(body),
-  });
-  return res.json();
+  try {
+    const res = await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify(body),
+    });
+    return res.json();
+  } catch (e) {
+    return { error: '網路錯誤' };
+  }
 }
 
 function showToast(msg, duration = 2500) {
@@ -583,22 +587,27 @@ async function saveInventory(btn) {
   if (!items.length) { showToast('請至少填寫一項'); return; }
   btn.disabled = true; btn.textContent = '儲存中...';
 
-  const res = await apiPost({ action: 'saveInventory', date: todayStr(), items });
-  if (res.ok) {
-    const now = new Date();
-    const timeStr = now.toTimeString().slice(0,5);
-    state.inventory = items.map(i => ({ name: i.name, qty: i.qty, openDate: i.openDate }));
-    state.invTodayUpdated = true;
-    state.invUpdateTime = todayStr() + ' ' + timeStr;
-    const cachedDaily = loadCache();
-    if (cachedDaily) {
-      cachedDaily.inv = { items: state.inventory, todayUpdated: true, updateTime: state.invUpdateTime };
-      saveCache(cachedDaily);
+  try {
+    const res = await apiPost({ action: 'saveInventory', date: todayStr(), items });
+    if (res.ok) {
+      const now = new Date();
+      const timeStr = now.toTimeString().slice(0,5);
+      state.inventory = items.map(i => ({ name: i.name, qty: i.qty, openDate: i.openDate }));
+      state.invTodayUpdated = true;
+      state.invUpdateTime = todayStr() + ' ' + timeStr;
+      const cachedDaily = loadCache();
+      if (cachedDaily) {
+        cachedDaily.inv = { items: state.inventory, todayUpdated: true, updateTime: state.invUpdateTime };
+        saveCache(cachedDaily);
+      }
+      showToast('庫存登記完成 ✓');
+      go('home');
+    } else {
+      showToast('儲存失敗：' + (res.error || ''));
+      btn.disabled = false; btn.textContent = '儲存庫存登記';
     }
-    showToast('庫存登記完成 ✓');
-    go('home');
-  } else {
-    showToast('儲存失敗：' + (res.error || ''));
+  } catch (e) {
+    showToast('儲存失敗，請重試');
     btn.disabled = false; btn.textContent = '儲存庫存登記';
   }
 }
