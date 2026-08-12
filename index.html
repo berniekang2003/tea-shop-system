@@ -284,6 +284,7 @@ function back() { go(state.prevScreen || 'home'); }
 async function loadAll() {
   try {
     const data = await apiGet('getAll', { date: todayStr() });
+    if (data.error) throw new Error('getAll: ' + data.error);
     state.items = data.items;
     state.inventory = data.inv.items || [];
     state.invTodayUpdated = data.inv.todayUpdated || false;
