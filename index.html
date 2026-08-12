@@ -283,16 +283,12 @@ function back() { go(state.prevScreen || 'home'); }
 
 async function loadAll() {
   try {
-    const [itemsData, invData, orderData] = await Promise.all([
-      apiGet('getItems'),
-      apiGet('getInventory', { date: todayStr() }),
-      apiGet('getOrder', { date: todayStr() }),
-    ]);
-    state.items = itemsData;
-    state.inventory = invData.items || [];
-    state.invTodayUpdated = invData.todayUpdated || false;
-    state.invUpdateTime = invData.updateTime || '';
-    state.order = orderData.found ? orderData : null;
+    const data = await apiGet('getAll', { date: todayStr() });
+    state.items = data.items;
+    state.inventory = data.inv.items || [];
+    state.invTodayUpdated = data.inv.todayUpdated || false;
+    state.invUpdateTime = data.inv.updateTime || '';
+    state.order = data.order.found ? data.order : null;
     state.loaded = true;
     try {
       render();
