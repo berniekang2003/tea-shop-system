@@ -242,6 +242,8 @@ const state = {
   inventory: [],
   order: null,
   loaded: false,
+  historyCache: null,
+  wasteCache: null,
 };
 
 function todayStr() {
@@ -303,6 +305,19 @@ async function loadAll() {
 
 function getInvItem(name) { return state.inventory.find(i => i.name.trim() === name.trim()); }
 
+function invStatus(name) {
+  const inv = getInvItem(name);
+  if (!inv) return 'new';
+  return Number(inv.qty) > 0 ? 'active' : 'soldout';
+}
+
+function nextRotationItem() {
+  const nonPaused = state.items.rotatingAll.filter(r => !r.paused);
+  return nonPaused.find(r => invStatus(r.name) === 'new')
+      || nonPaused.find(r => invStatus(r.name) === 'soldout')
+      || null;
+}
+
 function calcDaysOpen(openDate) {
   if (!openDate) return null;
   const parts = openDate.split('/');
@@ -352,17 +367,8 @@ function renderHome() {
   const shippingDone = order && (order.status === '已出貨' || order.status === '已完結');
   const arrivalDone = order && order.status === '已完結';
 
-  // 從庫存推導每個輪替品項的狀態
-  function invStatus(name) {
-    const inv = getInvItem(name);
-    if (!inv) return 'new';           // 從未登記 → 候補
-    return Number(inv.qty) > 0 ? 'active' : 'soldout';
-  }
-
-  // 計算下一輪替建議：優先從未登記，若全部都登記過則從售完中循環
   const nonPaused = rotatingAll.filter(r => !r.paused);
-  let nextItem = nonPaused.find(r => invStatus(r.name) === 'new') || null;
-  if (!nextItem) nextItem = nonPaused.find(r => invStatus(r.name) === 'soldout') || null;
+  const nextItem = nextRotationItem();
 
   const rotStrip = rotatingAll.map(r => {
     const st = invStatus(r.name);
@@ -490,11 +496,12 @@ function renderInventory() {
       <div class="card">${activeRotating.map((item, i) => invRow(item, i)).join('')}</div>
       <div class="section-title">固定茶品（杯）</div>
       <div class="card">${fixed.map((item, i) => invRow(item, activeRotating.length + i)).join('')}</div>
-      <button class="btn-primary" onclick="saveInventory()">儲存庫存登記</button>
-    </div>`;
+      <button class="btn-primary" onclick="saveInventory(this)">儲存庫存登記</button>
+    </div>
+    ${renderNavbar('')}`;
 }
 
-async function saveInventory() {
+async function saveInventory(btn) {
   const { fixed, rotatingAll } = state.items;
   const activeRotating = rotatingAll.filter(r => !r.paused);
   const allItems = [...activeRotating, ...fixed];
@@ -510,8 +517,7 @@ async function saveInventory() {
   }
 
   if (!items.length) { showToast('請至少填寫一項'); return; }
-  const btn = document.querySelector('.btn-primary');
-  if (btn) { btn.disabled = true; btn.textContent = '儲存中...'; }
+  btn.disabled = true; btn.textContent = '儲存中...';
 
   const res = await apiPost({ action: 'saveInventory', date: todayStr(), items });
   if (res.ok) {
@@ -523,7 +529,7 @@ async function saveInventory() {
     go('home');
   } else {
     showToast('儲存失敗：' + (res.error || ''));
-    if (btn) { btn.disabled = false; btn.textContent = '儲存庫存登記'; }
+    btn.disabled = false; btn.textContent = '儲存庫存登記';
   }
 }
 
@@ -533,15 +539,8 @@ function renderOrder() {
   const isEdit = !!(state.order && (state.order.status === '已申請' || state.order.status === '已出貨'));
   const existingOrder = isEdit ? state.order : null;
 
-  function invStatus(name) {
-    const inv = getInvItem(name);
-    if (!inv) return 'new';
-    return Number(inv.qty) > 0 ? 'active' : 'soldout';
-  }
-
   const nonPaused = rotatingAll.filter(r => !r.paused);
-  let nextItem = nonPaused.find(r => invStatus(r.name) === 'new') || null;
-  if (!nextItem) nextItem = nonPaused.find(r => invStatus(r.name) === 'soldout') || null;
+  const nextItem = nextRotationItem();
 
   const rotHint = nextItem
     ? `<div class="rot-hint">🔄 系統建議補入：<strong>${nextItem.name}</strong>（下一輪替）</div>` : '';
@@ -613,7 +612,7 @@ function renderOrder() {
       <div class="check-grid">${checkItems}</div>
       <div class="section-title" style="margin-top:16px">備品</div>
       <div class="card">${supplyRows}</div>
-      <button class="btn-primary" onclick="${isEdit ? 'updateOrder()' : 'submitOrder()'}">${isEdit ? '更新叫貨' : '送出叫貨申請'}</button>
+      <button class="btn-primary" onclick="${isEdit ? 'updateOrder(this)' : 'submitOrder(this)'}">${isEdit ? '更新叫貨' : '送出叫貨申請'}</button>
     </div>`;
 }
 
@@ -623,77 +622,56 @@ function toggleCheck(id) {
   el.querySelector('.check-box').textContent = el.classList.contains('checked') ? '✓' : '';
 }
 
-async function submitOrder() {
+function collectOrderItems() {
   const { fixed, rotatingAll } = state.items;
   const items = [];
-
-  const teaList = [...rotatingAll, ...fixed];
-  teaList.forEach((item, idx) => {
+  [...rotatingAll, ...fixed].forEach((item, idx) => {
     const el = document.getElementById(`tea_${idx}`);
-    if (el && el.value && Number(el.value) > 0)
-      items.push({ cat:'茶品', name: item.name, qty: Number(el.value) });
+    const qty = el ? Number(el.value) || 0 : 0;
+    if (qty > 0) items.push({ cat:'茶品', name: item.name, qty });
   });
-
   INGREDIENTS.forEach(i => {
     if (document.getElementById(`chk_${i}`)?.classList.contains('checked'))
       items.push({ cat:'配料', name: i, qty: 1 });
   });
-
   SUPPLIES.forEach(s => {
     const el = document.getElementById(`sup_${s}`);
-    if (el && el.value && Number(el.value) > 0)
-      items.push({ cat:'備品', name: s, qty: Number(el.value) });
+    const qty = el ? Number(el.value) || 0 : 0;
+    if (qty > 0) items.push({ cat:'備品', name: s, qty });
   });
+  return items;
+}
 
+async function submitOrder(btn) {
+  const items = collectOrderItems();
   if (!items.length) { showToast('請至少填寫一項需求'); return; }
-  const btn = document.querySelector('.btn-primary');
-  if (btn) { btn.disabled = true; btn.textContent = '送出中...'; }
-
+  btn.disabled = true; btn.textContent = '送出中...';
   const res = await apiPost({ action: 'submitOrder', date: todayStr(), items });
   if (res.ok) {
     const orderRes = await apiGet('getOrder', { date: todayStr() });
     state.order = orderRes.found ? orderRes : null;
+    state.historyCache = null;
     showToast('叫貨申請已送出 ✓');
     go('ordersheet');
   } else {
     showToast('送出失敗：' + (res.error || ''));
-    if (btn) { btn.disabled = false; btn.textContent = '送出叫貨申請'; }
+    btn.disabled = false; btn.textContent = '送出叫貨申請';
   }
 }
 
-async function updateOrder() {
-  const { fixed, rotatingAll } = state.items;
-  const order = state.order;
-  const items = [];
-
-  const teaList = [...rotatingAll, ...fixed];
-  teaList.forEach((item, idx) => {
-    const el = document.getElementById(`tea_${idx}`);
-    items.push({ cat:'茶品', name: item.name, qty: el ? Number(el.value) || 0 : 0 });
-  });
-
-  INGREDIENTS.forEach(i => {
-    if (document.getElementById(`chk_${i}`)?.classList.contains('checked'))
-      items.push({ cat:'配料', name: i, qty: 1 });
-  });
-
-  SUPPLIES.forEach(s => {
-    const el = document.getElementById(`sup_${s}`);
-    items.push({ cat:'備品', name: s, qty: el ? Number(el.value) || 0 : 0 });
-  });
-
-  const btn = document.querySelector('.btn-primary');
-  if (btn) { btn.disabled = true; btn.textContent = '更新中...'; }
-
-  const res = await apiPost({ action: 'updateOrder', orderId: order.orderId, items });
+async function updateOrder(btn) {
+  const items = collectOrderItems();
+  btn.disabled = true; btn.textContent = '更新中...';
+  const res = await apiPost({ action: 'updateOrder', orderId: state.order.orderId, items });
   if (res.ok) {
     const orderRes = await apiGet('getOrder', { date: todayStr() });
     state.order = orderRes.found ? orderRes : null;
+    state.historyCache = null;
     showToast('叫貨申請已更新 ✓');
     go('ordersheet');
   } else {
     showToast('更新失敗：' + (res.error || ''));
-    if (btn) { btn.disabled = false; btn.textContent = '更新叫貨'; }
+    btn.disabled = false; btn.textContent = '更新叫貨';
   }
 }
 
@@ -759,7 +737,7 @@ function renderOrderSheet() {
 
       ${canShip ? `
         <p style="font-size:12px;color:#8e8e93;margin-top:8px;text-align:center">橘色 = 出貨量已調整</p>
-        <button class="btn-primary" onclick="confirmShipping()">確認出貨</button>` : ''}
+        <button class="btn-primary" onclick="confirmShipping(this)">確認出貨</button>` : ''}
       ${canArrive ? `
         <button class="btn-secondary" style="margin-top:16px" onclick="go('order')">修改叫貨</button>
         <button class="btn-primary" style="background:#34c759;margin-top:8px" onclick="go('arrival')">確認到貨</button>` : ''}
@@ -775,7 +753,7 @@ function checkAdj(id, original) {
   el.classList.toggle('adjusted', Number(el.value) !== Number(original));
 }
 
-async function confirmShipping() {
+async function confirmShipping(btn) {
   const order = state.order;
   const items = order.items
     .filter(i => i.cat !== '配料')
@@ -789,18 +767,17 @@ async function confirmShipping() {
       };
     });
 
-  const btn = document.querySelector('.btn-primary');
-  if (btn) { btn.disabled = true; btn.textContent = '確認中...'; }
-
+  btn.disabled = true; btn.textContent = '確認中...';
   const res = await apiPost({ action: 'confirmShipping', orderId: order.orderId, items });
   if (res.ok) {
     const orderRes = await apiGet('getOrder', { date: todayStr() });
     state.order = orderRes.found ? orderRes : null;
+    state.historyCache = null;
     showToast('出貨已確認 ✓');
     render();
   } else {
     showToast('確認失敗：' + (res.error || ''));
-    if (btn) { btn.disabled = false; btn.textContent = '確認出貨'; }
+    btn.disabled = false; btn.textContent = '確認出貨';
   }
 }
 
@@ -844,7 +821,7 @@ function renderArrival() {
       <p style="font-size:13px;color:#8e8e93;margin-bottom:16px">逐項打勾確認收到，數量有差異請修改。最終數量將成為實際出貨紀錄。</p>
       ${nonIng.length ? `<div class="section-title">茶品 / 備品</div><div class="card">${nonIngRows}</div>` : ''}
       ${ing.length ? `<div class="section-title">配料</div><div class="card">${ingRows}</div>` : ''}
-      <button class="btn-primary" style="background:#34c759" onclick="confirmArrival()">完成到貨確認</button>
+      <button class="btn-primary" style="background:#34c759" onclick="confirmArrival(this)">完成到貨確認</button>
     </div>`;
 }
 
@@ -854,7 +831,7 @@ function toggleArrCheck(name) {
   el.textContent = el.classList.contains('checked') ? '✓' : '';
 }
 
-async function confirmArrival() {
+async function confirmArrival(btn) {
   const order = state.order;
   const nonIng = order.items.filter(i => i.cat !== '配料');
   const ing    = order.items.filter(i => i.cat === '配料');
@@ -869,18 +846,17 @@ async function confirmArrival() {
     items.push({ name: i.name, arrived: checked ? 1 : 0 });
   });
 
-  const btn = document.querySelector('.btn-primary');
-  if (btn) { btn.disabled = true; btn.textContent = '確認中...'; }
-
+  btn.disabled = true; btn.textContent = '確認中...';
   const res = await apiPost({ action: 'confirmArrival', orderId: order.orderId, items });
   if (res.ok) {
     const orderRes = await apiGet('getOrder', { date: todayStr() });
     state.order = orderRes.found ? orderRes : null;
+    state.historyCache = null;
     showToast('到貨確認完成 ✓');
     go('home');
   } else {
     showToast('確認失敗：' + (res.error || ''));
-    if (btn) { btn.disabled = false; btn.textContent = '完成到貨確認'; }
+    btn.disabled = false; btn.textContent = '完成到貨確認';
   }
 }
 
@@ -932,8 +908,9 @@ function renderSettings() {
 async function togglePause(name, el) {
   const res = await apiPost({ action: 'togglePause', item: name });
   if (res.ok) {
-    const itemsRes = await apiGet('getItems');
-    state.items = itemsRes;
+    const data = await apiGet('getAll', { date: todayStr() });
+    state.items = data.items;
+    state.order = data.order.found ? data.order : null;
     showToast('設定已更新 ✓');
     render();
   } else {
@@ -944,24 +921,20 @@ async function togglePause(name, el) {
 // ── 歷史 ──────────────────────────────────────
 function renderHistory() {
   return `
-    <div class="topbar"><div class="topbar-inner"><div class="topbar-title">歷史紀錄</div><div style="font-size:10px;color:#8e8e93">v3</div></div></div>
+    <div class="topbar"><div class="topbar-inner"><div class="topbar-title">歷史紀錄</div></div></div>
     <div class="content" id="hist-content"><div class="loading">載入中...</div></div>
     ${renderNavbar('history')}`;
 }
 
-async function loadHistory() {
-  const res = await apiGet('getHistory');
-  const records = res.records || [];
+function renderHistoryRecords(records) {
   const el = document.getElementById('hist-content');
   if (!el) return;
   if (!records.length) { el.innerHTML = '<div class="loading">尚無歷史紀錄</div>'; return; }
-
   const statusMap = {
     '已申請':'<span class="badge pending">已申請</span>',
     '已出貨':'<span class="badge shipped">已出貨</span>',
     '已完結':'<span class="badge done">已完結</span>',
   };
-
   el.innerHTML = `<div class="card" style="padding:0 16px">${records.map(r => `
     <div>
       <div class="hist-row" style="cursor:pointer" onclick="toggleHistDetail('${r.orderId}', '${r.date}')">
@@ -982,6 +955,13 @@ async function loadHistory() {
         <div style="color:#8e8e93;font-size:13px">載入中...</div>
       </div>
     </div>`).join('')}</div>`;
+}
+
+async function loadHistory() {
+  if (state.historyCache) { renderHistoryRecords(state.historyCache); return; }
+  const res = await apiGet('getHistory');
+  state.historyCache = res.records || [];
+  renderHistoryRecords(state.historyCache);
 }
 
 async function toggleHistDetail(orderId, date) {
@@ -1041,8 +1021,9 @@ async function markSoldOut(name) {
   if (!confirm(`確認「${name}」已售完？\n系統將切換至下一輪替品項。`)) return;
   const res = await apiPost({ action: 'markSoldOut', item: name });
   if (res.ok) {
-    const itemsRes = await apiGet('getItems');
-    state.items = itemsRes;
+    const data = await apiGet('getAll', { date: todayStr() });
+    state.items = data.items;
+    state.order = data.order.found ? data.order : null;
     showToast(`${name} 已標記售完 ✓`);
     render();
   } else {
@@ -1075,7 +1056,7 @@ function renderWaste() {
           <div style="font-size:13px;color:#8e8e93;margin-bottom:6px">報廢原因</div>
           <input id="waste-reason" type="text" placeholder="例：過期、品質異常…" style="width:100%;padding:10px;border-radius:10px;border:1px solid #e5e5ea;font-size:15px;box-sizing:border-box">
         </div>
-        <button class="btn-primary" onclick="submitWaste()">送出報廢</button>
+        <button class="btn-primary" onclick="submitWaste(this)">送出報廢</button>
       </div>
       <div class="section-title" style="margin-top:16px">歷史報廢紀錄</div>
       <div id="waste-history"><div class="loading">載入中...</div></div>
@@ -1096,15 +1077,15 @@ function setWasteType(type) {
   document.getElementById('waste-type-ing').classList.toggle('active', type === '配料');
 }
 
-async function submitWaste() {
+async function submitWaste(btn) {
   const item   = document.getElementById('waste-item')?.value;
   const qty    = Number(document.getElementById('waste-qty')?.value) || 1;
   const reason = document.getElementById('waste-reason')?.value.trim();
   if (!item) return;
-  const btn = document.querySelector('.btn-primary');
-  if (btn) { btn.disabled = true; btn.textContent = '送出中...'; }
+  btn.disabled = true; btn.textContent = '送出中...';
   const res = await apiPost({ action: 'addWaste', cat: wasteType, name: item, qty, reason });
   if (res.ok) {
+    state.wasteCache = null;
     showToast('報廢記錄已送出 ✓');
     document.getElementById('waste-reason').value = '';
     document.getElementById('waste-qty').value = '1';
@@ -1112,14 +1093,12 @@ async function submitWaste() {
   } else {
     showToast('送出失敗：' + (res.error || ''));
   }
-  if (btn) { btn.disabled = false; btn.textContent = '送出報廢'; }
+  btn.disabled = false; btn.textContent = '送出報廢';
 }
 
-async function loadWasteHistory() {
+function renderWasteRecords(records) {
   const el = document.getElementById('waste-history');
   if (!el) return;
-  const res = await apiGet('getWasteHistory');
-  const records = res.records || [];
   if (!records.length) { el.innerHTML = '<div class="loading">尚無報廢紀錄</div>'; return; }
   const catColor = { '茶品':'#007aff', '配料':'#ff9500' };
   el.innerHTML = `<div class="card" style="padding:0 16px">${records.map(r => `
@@ -1134,6 +1113,13 @@ async function loadWasteHistory() {
         </div>
       </div>
     </div>`).join('')}</div>`;
+}
+
+async function loadWasteHistory() {
+  if (state.wasteCache) { renderWasteRecords(state.wasteCache); return; }
+  const res = await apiGet('getWasteHistory');
+  state.wasteCache = res.records || [];
+  renderWasteRecords(state.wasteCache);
 }
 
 // ── Render ────────────────────────────────────
