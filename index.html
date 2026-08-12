@@ -252,11 +252,15 @@ function todayStr() {
 }
 
 async function apiGet(action, params = {}) {
-  const url = new URL(API);
-  url.searchParams.set('action', action);
-  Object.entries(params).forEach(([k,v]) => url.searchParams.set(k,v));
-  const res = await fetch(url.toString());
-  return res.json();
+  try {
+    const url = new URL(API);
+    url.searchParams.set('action', action);
+    Object.entries(params).forEach(([k,v]) => url.searchParams.set(k,v));
+    const res = await fetch(url.toString());
+    return res.json();
+  } catch (e) {
+    return { error: '網路錯誤' };
+  }
 }
 
 async function apiPost(body) {
