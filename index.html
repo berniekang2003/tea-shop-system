@@ -529,7 +529,7 @@ function renderInventory() {
 
   function invRow(item, idx) {
     const existing = getInvItem(item.name);
-    const qty = '';
+    const qty = existing ? existing.qty : '';
     const openDate = existing ? (existing.openDate || '').replace(/\//g,'-') : '';
     return `<div class="field-row" style="flex-wrap:wrap;gap:6px">
       <div style="width:100%;display:flex;align-items:center;justify-content:space-between">
@@ -585,10 +585,16 @@ async function saveInventory(btn) {
 
   const res = await apiPost({ action: 'saveInventory', date: todayStr(), items });
   if (res.ok) {
-    const invRes = await apiGet('getInventory', { date: todayStr() });
-    state.inventory = invRes.items || [];
-    state.invTodayUpdated = invRes.todayUpdated || false;
-    state.invUpdateTime = invRes.updateTime || '';
+    const now = new Date();
+    const timeStr = now.toTimeString().slice(0,5);
+    state.inventory = items.map(i => ({ name: i.name, qty: i.qty, openDate: i.openDate }));
+    state.invTodayUpdated = true;
+    state.invUpdateTime = todayStr() + ' ' + timeStr;
+    const cachedDaily = loadCache();
+    if (cachedDaily) {
+      cachedDaily.inv = { items: state.inventory, todayUpdated: true, updateTime: state.invUpdateTime };
+      saveCache(cachedDaily);
+    }
     showToast('庫存登記完成 ✓');
     go('home');
   } else {
@@ -712,8 +718,8 @@ async function submitOrder(btn) {
   btn.disabled = true; btn.textContent = '送出中...';
   const res = await apiPost({ action: 'submitOrder', date: todayStr(), items });
   if (res.ok) {
-    const orderRes = await apiGet('getOrder', { date: todayStr() });
-    state.order = orderRes.found ? orderRes : null;
+    const daily = await apiGet('getDailyData', { date: todayStr() });
+    if (!daily.error) { applyDaily(daily); saveCache(daily); }
     state.historyCache = null;
     showToast('叫貨申請已送出 ✓');
     go('ordersheet');
@@ -728,8 +734,8 @@ async function updateOrder(btn) {
   btn.disabled = true; btn.textContent = '更新中...';
   const res = await apiPost({ action: 'updateOrder', orderId: state.order.orderId, items });
   if (res.ok) {
-    const orderRes = await apiGet('getOrder', { date: todayStr() });
-    state.order = orderRes.found ? orderRes : null;
+    const daily = await apiGet('getDailyData', { date: todayStr() });
+    if (!daily.error) { applyDaily(daily); saveCache(daily); }
     state.historyCache = null;
     showToast('叫貨申請已更新 ✓');
     go('ordersheet');
@@ -1133,6 +1139,8 @@ function renderWaste() {
 
 let wasteType = '茶品';
 
+function initWasteType() { wasteType = '茶品'; }
+
 function setWasteType(type) {
   wasteType = type;
   const { rotatingAll, fixed } = state.items;
@@ -1203,7 +1211,7 @@ function render() {
   else if (s === 'ordersheet') app.innerHTML = renderOrderSheet();
   else if (s === 'arrival')    app.innerHTML = renderArrival();
   else if (s === 'history')  { app.innerHTML = renderHistory(); loadHistory(); }
-  else if (s === 'waste')    { app.innerHTML = renderWaste();   loadWasteHistory(); }
+  else if (s === 'waste')    { initWasteType(); app.innerHTML = renderWaste(); loadWasteHistory(); }
   else if (s === 'settings')   app.innerHTML = renderSettings();
 }
 
