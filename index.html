@@ -283,11 +283,13 @@ function go(screen) {
 
 function back() { go(state.prevScreen || 'home'); }
 
-const CACHE_KEY = 'teasys_cache';
+const CACHE_KEY       = 'teasys_cache';
+const ITEMS_CACHE_KEY = 'teasys_items';
+const ITEMS_TTL_MS    = 7 * 24 * 60 * 60 * 1000; // 7 天
 
-function saveCache(data) {
+function saveCache(daily) {
   try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify({ date: todayStr(), data }));
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ date: todayStr(), data: daily }));
   } catch(e) {}
 }
 
@@ -300,38 +302,64 @@ function loadCache() {
   } catch(e) { return null; }
 }
 
-function applyData(data) {
-  state.items = data.items;
-  state.inventory = data.inv.items || [];
-  state.invTodayUpdated = data.inv.todayUpdated || false;
-  state.invUpdateTime = data.inv.updateTime || '';
-  state.order = data.order.found ? data.order : null;
+function saveItemsCache(items) {
+  try {
+    localStorage.setItem(ITEMS_CACHE_KEY, JSON.stringify({ ts: Date.now(), items }));
+  } catch(e) {}
+}
+
+function loadItemsCache() {
+  try {
+    const raw = localStorage.getItem(ITEMS_CACHE_KEY);
+    if (!raw) return null;
+    const { ts, items } = JSON.parse(raw);
+    return Date.now() - ts < ITEMS_TTL_MS ? items : null;
+  } catch(e) { return null; }
+}
+
+function applyDaily(daily) {
+  state.inventory = daily.inv.items || [];
+  state.invTodayUpdated = daily.inv.todayUpdated || false;
+  state.invUpdateTime = daily.inv.updateTime || '';
+  state.order = daily.order.found ? daily.order : null;
 }
 
 async function loadAll() {
-  const cached = loadCache();
+  const cachedItems = loadItemsCache();
+  const cachedDaily = loadCache();
 
-  if (cached) {
-    applyData(cached);
+  // 有 cache → 立刻顯示
+  if (cachedItems && cachedDaily) {
+    state.items = cachedItems;
+    applyDaily(cachedDaily);
     state.loaded = true;
     try { render(); } catch(e) {}
   }
 
   try {
-    const data = await apiGet('getAll', { date: todayStr() });
-    if (data.error) throw new Error(data.error);
-    applyData(data);
-    saveCache(data);
-    state.loaded = true;
-    if (!cached) {
-      try { render(); } catch(re) {
-        document.getElementById('app').innerHTML = `<div class="loading">畫面錯誤：${re.message}<br><br>請截圖</div>`;
-      }
+    let items = cachedItems;
+    if (!items) {
+      // items 過期或沒有 → 抓完整 getAll
+      const data = await apiGet('getAll', { date: todayStr() });
+      if (data.error) throw new Error(data.error);
+      items = data.items;
+      saveItemsCache(items);
+      applyDaily(data);
+      saveCache(data);
     } else {
-      try { render(); } catch(e) {}
+      // items 有效 → 只抓 getDailyData
+      const daily = await apiGet('getDailyData', { date: todayStr() });
+      if (daily.error) throw new Error(daily.error);
+      applyDaily(daily);
+      saveCache(daily);
+    }
+    state.items = items;
+    state.loaded = true;
+    try { render(); } catch(re) {
+      if (!cachedItems) document.getElementById('app').innerHTML = `<div class="loading">畫面錯誤：${re.message}<br><br>請截圖</div>`;
     }
   } catch(e) {
-    if (!cached) {
+    if (!cachedItems || !cachedDaily) {
       document.getElementById('app').innerHTML = `<div class="loading">API錯誤：${e.message}<br><br>請截圖</div>`;
     } else {
       showToast('⚠️ 網路異常，顯示上次資料');
