@@ -253,10 +253,8 @@ function todayStr() {
 
 async function apiGet(action, params = {}) {
   try {
-    const url = new URL(API);
-    url.searchParams.set('action', action);
-    Object.entries(params).forEach(([k,v]) => url.searchParams.set(k,v));
-    const res = await fetch(url.toString());
+    const qs = new URLSearchParams({ action, ...params }).toString();
+    const res = await fetch(`${API}?${qs}`);
     return res.json();
   } catch (e) {
     return { error: '網路錯誤' };
