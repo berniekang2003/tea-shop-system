@@ -505,7 +505,7 @@ function renderHome() {
         <button class="action-btn ${orderDone?'done':''}" onclick="go(${!orderDone ? "'order'" : (order.status==='已申請'||order.status==='已出貨') ? "'order'" : "'ordersheet'"})">
           <div class="icon">📦</div>
           <div class="label">叫貨申請</div>
-          <div class="sublabel">${!orderDone ? '尚未申請' : order.status==='已申請' ? '✓ '+((order.requestTime||'').split(' ')[1]||'')+' 申請中（可更新）' : '✓ '+((order.requestTime||'').split(' ')[1]||'')+' 送出'}</div>
+          <div class="sublabel">${!orderDone ? '尚未申請' : order.status==='已申請' ? '✓ '+((order.requestTime||'').split(' ')[1]||'')+' 申請中（可更新）' : '✓ '+((order.requestTime||'').split(' ')[1]||'')+' 送出'}${order && order.totalCount > 1 ? '・共'+order.totalCount+'張' : ''}</div>
         </button>
       </div>
 
@@ -875,11 +875,11 @@ async function confirmShipping(btn) {
   btn.disabled = true; btn.textContent = '確認中...';
   const res = await apiPost({ action: 'confirmShipping', orderId: order.orderId, items });
   if (res.ok) {
-    const orderRes = await apiGet('getOrder', { date: todayStr() });
-    state.order = orderRes.found ? orderRes : null;
+    const daily = await apiGet('getDailyData', { date: todayStr() });
+    if (!daily.error) { applyDaily(daily); saveCache(daily); }
     state.historyCache = null;
     showToast('出貨已確認 ✓');
-    render();
+    go('home');
   } else {
     showToast('確認失敗：' + (res.error || ''));
     btn.disabled = false; btn.textContent = '確認出貨';
