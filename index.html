@@ -1131,7 +1131,20 @@ async function toggleHistDetail(orderId, date) {
       </div>`).join('');
   }
 
+  html += `<button onclick="deleteOrder('${orderId}')" style="margin-top:12px;width:100%;padding:8px;background:none;border:1px solid #ff3b30;border-radius:8px;color:#ff3b30;font-size:14px;cursor:pointer">刪除此叫貨單</button>`;
   detail.innerHTML = html || '<div style="color:#8e8e93;font-size:13px">無明細資料</div>';
+}
+
+async function deleteOrder(orderId) {
+  if (!confirm('確定要刪除這張叫貨單？此操作無法復原。')) return;
+  const res = await apiPost({ action: 'deleteOrder', orderId });
+  if (res.ok) {
+    state.historyCache = null;
+    showToast('已刪除 ✓');
+    go('history');
+  } else {
+    showToast('刪除失敗：' + (res.error || ''));
+  }
 }
 
 // ── 標記售完 ──────────────────────────────────
