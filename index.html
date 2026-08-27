@@ -325,6 +325,7 @@ function loadItemsCache() {
 
 function applyDaily(daily) {
   state.inventory = daily.inv.items || [];
+  state.openingInventory = daily.inv.openingItems || [];
   state.invTodayUpdated = daily.inv.todayUpdated || false;
   state.invUpdateTime = daily.inv.updateTime || '';
   state.order = daily.order.found ? daily.order : null;
@@ -455,6 +456,8 @@ function renderHome() {
     const qty = inv ? Number(inv.qty) : null;
     const openDate = inv ? inv.openDate : '';
     const soldOutTime = inv ? (inv.soldOutTime || '') : '';
+    const openingInv = (state.openingInventory || []).find(i => i.name.trim() === item.name.trim());
+    const openingQty = openingInv ? Number(openingInv.qty) : null;
     const pct = qty !== null && qty > 0 ? qty / item.cups : 0;
     const cls = qty !== null && qty > 0 ? levelClass(pct) : 'low';
     const fillPct = Math.round(pct * 100);
@@ -477,6 +480,7 @@ function renderHome() {
         <div class="level-track"><div class="level-fill ${cls}" style="width:${fillPct}%"></div></div>
         <span class="level-text ${cls}">${qty !== null ? qty : '—'}</span>
         <span class="level-max">／${item.cups}</span>
+        ${openingQty !== null ? `<span style="font-size:11px;color:#8e8e93;margin-left:4px">開局 ${openingQty}</span>` : ''}
       </div>
     </div>`;
   }
@@ -571,6 +575,12 @@ function renderInventory() {
       </div>
     </div>
     <div class="content">
+      <div class="card" style="margin-bottom:8px">
+        <label style="display:flex;align-items:center;gap:10px;padding:4px 0;cursor:pointer">
+          <input type="checkbox" id="isOpening" style="width:18px;height:18px;cursor:pointer">
+          <span style="font-size:15px;font-weight:500">今日開局登記</span>
+        </label>
+      </div>
       <div class="section-title">傳統原味（杯）</div>
       <div class="card">${activeRotating.map((item, i) => invRow(item, i)).join('')}</div>
       <div class="section-title">固定茶品（杯）</div>
@@ -598,22 +608,25 @@ async function saveInventory(btn) {
   }
 
   if (!items.length) { showToast('請至少填寫一項'); return; }
+  const isOpening = document.getElementById('isOpening')?.checked || false;
   btn.disabled = true; btn.textContent = '儲存中...';
 
   try {
-    const res = await apiPost({ action: 'saveInventory', date: todayStr(), items });
+    const res = await apiPost({ action: 'saveInventory', date: todayStr(), items, isOpening });
     if (res.ok) {
       const now = new Date();
       const timeStr = now.toTimeString().slice(0,5);
-      state.inventory = items.map(i => ({ name: i.name, qty: i.qty, openDate: i.openDate, soldOutTime: i.soldOutTime }));
+      const mapped = items.map(i => ({ name: i.name, qty: i.qty, openDate: i.openDate, soldOutTime: i.soldOutTime }));
+      state.inventory = mapped;
+      if (isOpening) state.openingInventory = mapped;
       state.invTodayUpdated = true;
       state.invUpdateTime = todayStr() + ' ' + timeStr;
       const cachedDaily = loadCache();
       if (cachedDaily) {
-        cachedDaily.inv = { items: state.inventory, todayUpdated: true, updateTime: state.invUpdateTime };
+        cachedDaily.inv = { items: state.inventory, openingItems: state.openingInventory, todayUpdated: true, updateTime: state.invUpdateTime };
         saveCache(cachedDaily);
       }
-      showToast('庫存登記完成 ✓');
+      showToast(isOpening ? '開局登記完成 ✓' : '庫存登記完成 ✓');
       go('home');
     } else {
       showToast('儲存失敗：' + (res.error || ''));
