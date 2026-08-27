@@ -1099,7 +1099,7 @@ async function toggleHistDetail(orderId, date) {
   if (detail.dataset.loaded) return;
   detail.dataset.loaded = '1';
 
-  const res = await apiGet('getOrder', { date });
+  const res = await apiGet('getOrder', { orderId });
   if (!res.found || !res.items || !res.items.length) {
     detail.innerHTML = '<div style="color:#8e8e93;font-size:13px">無明細資料</div>';
     return;
