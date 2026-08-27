@@ -1057,7 +1057,7 @@ function renderHistoryRecords(records) {
     <div>
       <div class="hist-row" style="cursor:pointer" onclick="toggleHistDetail('${r.orderId}', '${r.date}')">
         <div style="flex:1">
-          <div class="hist-date">${r.date}</div>
+          <div class="hist-date">${r.date}${r.orderId.includes('-') ? ' 第'+r.orderId.split('-')[1]+'張' : ''}</div>
           <div class="hist-meta">
             申請 ${(r.requestTime||'').split(' ')[1]||'—'}
             ${r.shippingTime ? '・出貨 '+(r.shippingTime||'').split(' ')[1] : ''}
