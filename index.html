@@ -263,14 +263,18 @@ async function apiGet(action, params = {}) {
 
 async function apiPost(body) {
   try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 30000);
     const res = await fetch(API, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify(body),
+      signal: controller.signal,
     });
+    clearTimeout(timer);
     return res.json();
   } catch (e) {
-    return { error: '網路錯誤' };
+    return { error: e.name === 'AbortError' ? '請求逾時，請重試' : '網路錯誤' };
   }
 }
 
@@ -751,15 +755,20 @@ async function submitOrder(btn) {
   const items = collectOrderItems();
   if (!items.length) { showToast('請至少填寫一項需求'); return; }
   btn.disabled = true; btn.textContent = '送出中...';
-  const res = await apiPost({ action: 'submitOrder', date: todayStr(), items });
-  if (res.ok) {
-    const daily = await apiGet('getDailyData', { date: todayStr() });
-    if (!daily.error) { applyDaily(daily); saveCache(daily); }
-    state.historyCache = null;
-    showToast('叫貨申請已送出 ✓');
-    go('ordersheet');
-  } else {
-    showToast('送出失敗：' + (res.error || ''));
+  try {
+    const res = await apiPost({ action: 'submitOrder', date: todayStr(), items });
+    if (res.ok) {
+      const daily = await apiGet('getDailyData', { date: todayStr() });
+      if (!daily.error) { applyDaily(daily); saveCache(daily); }
+      state.historyCache = null;
+      showToast('叫貨申請已送出 ✓');
+      go('ordersheet');
+    } else {
+      showToast('送出失敗：' + (res.error || ''));
+      btn.disabled = false; btn.textContent = '送出叫貨申請';
+    }
+  } catch (e) {
+    showToast('送出失敗，請重試');
     btn.disabled = false; btn.textContent = '送出叫貨申請';
   }
 }
