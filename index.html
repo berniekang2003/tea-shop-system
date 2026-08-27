@@ -502,7 +502,7 @@ function renderHome() {
           <div class="label">庫存登記</div>
           <div class="sublabel">${invDone ? '✓ '+invTime+' 完成' : '尚未填寫'}</div>
         </button>
-        <button class="action-btn ${orderDone?'done':''}" onclick="go(${!orderDone ? "'order'" : (order.status==='已申請'||order.status==='已出貨') ? "'order'" : "'ordersheet'"})">
+        <button class="action-btn ${orderDone?'done':''}" onclick="go('order')">
           <div class="icon">📦</div>
           <div class="label">叫貨申請</div>
           <div class="sublabel">${!orderDone ? '尚未申請' : order.status==='已申請' ? '✓ '+((order.requestTime||'').split(' ')[1]||'')+' 申請中（可更新）' : '✓ '+((order.requestTime||'').split(' ')[1]||'')+' 送出'}${order && order.totalCount > 1 ? '・共'+order.totalCount+'張' : ''}</div>
