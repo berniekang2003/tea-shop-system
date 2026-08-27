@@ -464,19 +464,19 @@ function renderHome() {
       : st === 'new'
       ? '<span style="font-size:11px;background:#8e8e93;color:#fff;border-radius:4px;padding:1px 6px;margin-left:4px">候補</span>'
       : '';
-    const soldOutTag = soldOutTime
-      ? `<span style="font-size:11px;color:#8e8e93">完售 ${soldOutTime}</span>` : '';
+    const timeDisplay = soldOutTime ? soldOutTime.slice(0,5) : '';
+    const soldOutTag = timeDisplay
+      ? `<span style="font-size:11px;background:#ff3b30;color:#fff;border-radius:4px;padding:1px 6px;margin-left:4px">[${timeDisplay}]</span>` : '';
 
     return `<div class="row" style="flex-direction:column;align-items:flex-start">
       <div style="width:100%;display:flex;align-items:center;justify-content:space-between">
-        <span style="font-size:15px;font-weight:500">${item.name}${statusTag}</span>
+        <span style="font-size:15px;font-weight:500">${item.name}${statusTag}${soldOutTag}</span>
         ${openDate ? openDateLabel(openDate) : '<span class="open-ok">未填</span>'}
       </div>
       <div class="level-wrap" style="width:100%">
         <div class="level-track"><div class="level-fill ${cls}" style="width:${fillPct}%"></div></div>
         <span class="level-text ${cls}">${qty !== null ? qty : '—'}</span>
         <span class="level-max">／${item.cups}</span>
-        ${soldOutTag}
       </div>
     </div>`;
   }
