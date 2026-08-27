@@ -671,7 +671,7 @@ function renderOrder() {
       <span class="field-name">${item.name}${tagHtml}</span>
       <input class="field-input ${inputCls}" type="tel" min="0"
         id="tea_${idx}" value="${defaultVal}" placeholder="0">
-      <span class="field-unit">桶</span>
+      <span class="field-unit">杯</span>
     </div>`;
   }
 
@@ -707,11 +707,11 @@ function renderOrder() {
     </div>
     <div class="content">
       ${rotHint}
-      <div class="section-title">傳統原味（桶）</div>
+      <div class="section-title">傳統原味（杯）</div>
       <div class="card">
         ${rotatingAll.map((r, i) => teaRow(r, i)).join('')}
       </div>
-      <div class="section-title">固定茶品（桶）</div>
+      <div class="section-title">固定茶品（杯）</div>
       <div class="card">${fixed.map((f, i) => teaRow(f, rotatingAll.length + i)).join('')}</div>
       <div class="section-title">配料（勾選即出）</div>
       <div class="check-grid">${checkItems}</div>
@@ -831,7 +831,7 @@ function renderOrderSheet() {
           <span style="font-size:12px;color:#8e8e93">申請</span>
           <span style="font-size:12px;color:#007aff">出貨</span>
         </div>
-        <div class="card">${teaItems.map(i => monRow(i,'桶')).join('')}</div>` : ''}
+        <div class="card">${teaItems.map(i => monRow(i,'杯')).join('')}</div>` : ''}
 
       <div class="section-title">配料</div>
       <div class="supply-grid">${ingTags}</div>
@@ -895,7 +895,7 @@ function renderArrival() {
   const ing    = order.items.filter(i => i.cat === '配料');
 
   const nonIngRows = nonIng.map(i => {
-    const unit = i.cat === '茶品' ? '桶' : (SUPPLY_UNITS[i.name] || '');
+    const unit = i.cat === '茶品' ? '杯' : (SUPPLY_UNITS[i.name] || '');
     const shipped = i.shipped !== '' ? i.shipped : i.requested;
     return `<div class="arr-item">
       <div class="arr-check" id="arr_${i.name}" onclick="toggleArrCheck('${i.name}')"></div>
@@ -1106,7 +1106,7 @@ async function toggleHistDetail(orderId, date) {
     html += teaItems.map(i => `
       <div style="display:flex;justify-content:space-between;font-size:14px;padding:3px 0">
         <span>${i.name}</span>
-        <span style="color:#007aff">${i.requested} 桶${i.shipped!==''&&i.shipped!=i.requested?' → '+i.shipped+' 桶':''}</span>
+        <span style="color:#007aff">${i.requested} 杯${i.shipped!==''&&i.shipped!=i.requested?' → '+i.shipped+' 杯':''}</span>
       </div>`).join('');
   }
   if (ingItems.length) {
