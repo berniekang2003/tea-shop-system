@@ -454,6 +454,7 @@ function renderHome() {
     const inv = getInvItem(item.name);
     const qty = inv ? Number(inv.qty) : null;
     const openDate = inv ? inv.openDate : '';
+    const soldOutTime = inv ? (inv.soldOutTime || '') : '';
     const pct = qty !== null && qty > 0 ? qty / item.cups : 0;
     const cls = qty !== null && qty > 0 ? levelClass(pct) : 'low';
     const fillPct = Math.round(pct * 100);
@@ -463,6 +464,8 @@ function renderHome() {
       : st === 'new'
       ? '<span style="font-size:11px;background:#8e8e93;color:#fff;border-radius:4px;padding:1px 6px;margin-left:4px">候補</span>'
       : '';
+    const soldOutTag = soldOutTime
+      ? `<span style="font-size:11px;color:#8e8e93">完售 ${soldOutTime}</span>` : '';
 
     return `<div class="row" style="flex-direction:column;align-items:flex-start">
       <div style="width:100%;display:flex;align-items:center;justify-content:space-between">
@@ -473,6 +476,7 @@ function renderHome() {
         <div class="level-track"><div class="level-fill ${cls}" style="width:${fillPct}%"></div></div>
         <span class="level-text ${cls}">${qty !== null ? qty : '—'}</span>
         <span class="level-max">／${item.cups}</span>
+        ${soldOutTag}
       </div>
     </div>`;
   }
