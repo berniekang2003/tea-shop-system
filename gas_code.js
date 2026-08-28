@@ -311,7 +311,7 @@ function getSoldOutHistory(params) {
   // Group rows by date+name
   const grouped = {};
   rows.forEach(r => {
-    const date = toStr(r[0]);
+    const date = toStr(r[0]).replace(/\//g, '');
     if (!date) return;
     if (start && date < start) return;
     if (end   && date > end)   return;

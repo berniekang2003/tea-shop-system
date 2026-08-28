@@ -1171,7 +1171,7 @@ function statsDrawChart() {
 
   // X axis
   allDates.forEach((d, i) => {
-    const label = d.slice(5).replace('/', '/');
+    const label = d.slice(4, 6) + '/' + d.slice(6, 8);
     html += `<text font-size="10" fill="#8e8e93" x="${xPos(i)}" y="${PAD.top+cH+14}" text-anchor="middle" font-family="system-ui">${label}</text>`;
   });
   html += `<line stroke="#e5e5ea" x1="${PAD.left}" y1="${PAD.top}" x2="${PAD.left}" y2="${PAD.top+cH}"/>`;
