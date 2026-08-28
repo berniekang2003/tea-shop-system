@@ -591,6 +591,10 @@ function renderInventory() {
           <span style="font-size:15px;font-weight:500">今日開局登記</span>
         </label>
         <label style="display:flex;align-items:center;gap:10px;padding:4px 0;cursor:pointer;margin-top:6px">
+          <input type="checkbox" id="isAdding" style="width:18px;height:18px;cursor:pointer">
+          <span style="font-size:15px;font-weight:500">追加開桶</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;padding:4px 0;cursor:pointer;margin-top:6px">
           <input type="checkbox" id="isClosing" style="width:18px;height:18px;cursor:pointer">
           <span style="font-size:15px;font-weight:500">閉店盤點</span>
         </label>
@@ -623,11 +627,12 @@ async function saveInventory(btn) {
 
   if (!items.length) { showToast('請至少填寫一項'); return; }
   const isOpening = document.getElementById('isOpening')?.checked || false;
+  const isAdding  = document.getElementById('isAdding')?.checked || false;
   const isClosing = document.getElementById('isClosing')?.checked || false;
   btn.disabled = true; btn.textContent = '儲存中...';
 
   try {
-    const res = await apiPost({ action: 'saveInventory', date: todayStr(), items, isOpening, isClosing });
+    const res = await apiPost({ action: 'saveInventory', date: todayStr(), items, isOpening, isAdding, isClosing });
     if (res.ok) {
       const now = new Date();
       const timeStr = now.toTimeString().slice(0,5);
@@ -641,7 +646,7 @@ async function saveInventory(btn) {
         cachedDaily.inv = { items: state.inventory, openingItems: state.openingInventory, todayUpdated: true, updateTime: state.invUpdateTime };
         saveCache(cachedDaily);
       }
-      showToast(isClosing ? '閉店盤點完成 ✓' : isOpening ? '開局登記完成 ✓' : '庫存登記完成 ✓');
+      showToast(isClosing ? '閉店盤點完成 ✓' : isAdding ? '追加開桶完成 ✓' : isOpening ? '開局登記完成 ✓' : '庫存登記完成 ✓');
       go('home');
     } else {
       showToast('儲存失敗：' + (res.error || ''));
