@@ -5,11 +5,12 @@ function doGet(e) {
     const action = e.parameter.action;
     if (action === 'getItems')        return getItems();
     if (action === 'getInventory')    return getInventory(e.parameter.date);
-    if (action === 'getOrder')        return getOrder(e.parameter.date);
+    if (action === 'getOrder') return getOrder(e.parameter);
     if (action === 'getHistory')      return getHistory();
     if (action === 'getWasteHistory') return getWasteHistory(e.parameter);
     if (action === 'getAll')          return getAll(e.parameter);
-    if (action === 'getDailyData')    return getDailyData(e.parameter);
+    if (action === 'getDailyData')       return getDailyData(e.parameter);
+    if (action === 'getSoldOutHistory')  return getSoldOutHistory(e.parameter);
     return respond({ error: '未知的 action' });
   } catch(err) {
     return respond({ error: err.message });
@@ -28,6 +29,7 @@ function doPost(e) {
     if (action === 'togglePause')     return togglePause(data.item);
     if (action === 'updateOrder')     return updateOrder(data);
     if (action === 'addWaste')        return addWaste(data);
+    if (action === 'deleteOrder')     return deleteOrder(data);
     return respond({ error: '未知的 action' });
   } catch(err) {
     return respond({ error: err.message });
@@ -119,7 +121,7 @@ function saveInventory(data) {
     "'" + data.date, timestamp, item.name, item.qty,
     item.openDate ? ("'" + item.openDate) : '',
     item.soldOutTime ? ("'" + item.soldOutTime) : '',
-    data.isOpening ? '開局' : ''
+    data.isClosing ? '閉店' : data.isOpening ? '開局' : ''
   ]);
   sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, 7).setValues(rows);
   sendLineNotify('📋 分店已完成今日庫存登記。');
@@ -170,16 +172,25 @@ function submitOrder(data) {
   return respond({ ok: true, orderId });
 }
 
-function getOrder(date) {
+function getOrder(params) {
   const orderSheet  = SS.getSheetByName('叫貨單');
   const detailSheet = SS.getSheetByName('叫貨明細');
-  const datePrefix = (date || today()).replace(/\//g, '');
   if (orderSheet.getLastRow() <= 1) return respond({ found: false, totalCount: 0 });
   const orders = orderSheet.getRange(2, 1, orderSheet.getLastRow() - 1, 6).getValues();
-  const todayOrders = orders.filter(r => String(r[0]).startsWith(datePrefix));
-  const totalCount = todayOrders.length;
-  if (totalCount === 0) return respond({ found: false, totalCount: 0 });
-  const order = todayOrders[todayOrders.length - 1];
+
+  let order, totalCount = 0;
+  if (params.orderId) {
+    order = orders.find(r => String(r[0]) === params.orderId);
+    if (!order) return respond({ found: false, totalCount: 0 });
+    totalCount = 1;
+  } else {
+    const datePrefix = (params.date || params || today()).replace(/\//g, '');
+    const todayOrders = orders.filter(r => String(r[0]).startsWith(datePrefix));
+    totalCount = todayOrders.length;
+    if (totalCount === 0) return respond({ found: false, totalCount: 0 });
+    order = todayOrders[todayOrders.length - 1];
+  }
+
   const orderId = String(order[0]);
   const details = detailSheet.getLastRow() > 1
     ? detailSheet.getRange(2, 1, detailSheet.getLastRow() - 1, 6).getValues()
@@ -286,6 +297,101 @@ function confirmArrival(data) {
     }
   }
   sendLineNotify('✅ 分店已確認到貨，本單完結。');
+  return respond({ ok: true });
+}
+
+function getSoldOutHistory(params) {
+  const sheet = SS.getSheetByName('庫存登記');
+  if (sheet.getLastRow() <= 1) return respond({ records: [] });
+  const rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, 7).getValues();
+
+  const start = (params.startDate || '').replace(/\//g, '');
+  const end   = (params.endDate   || '').replace(/\//g, '');
+
+  // Group rows by date+name
+  const grouped = {};
+  rows.forEach(r => {
+    const date = toStr(r[0]);
+    if (!date) return;
+    if (start && date < start) return;
+    if (end   && date > end)   return;
+    const name = toStr(r[2]);
+    if (!name) return;
+    const key = date + '|' + name;
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push({
+      timestamp: r[1],
+      qty: Number(r[3]) || 0,
+      soldOutTime: r[5] instanceof Date
+        ? Utilities.formatDate(r[5], Session.getScriptTimeZone(), 'HH:mm')
+        : toStr(r[5]),
+      tag: toStr(r[6])
+    });
+  });
+
+  const records = [];
+  Object.keys(grouped).sort().forEach(key => {
+    const [date, name] = key.split('|');
+    const entries = grouped[key];
+
+    // Opening qty from 開局 tag
+    const openingEntry = entries.find(e => e.tag === '開局');
+    const openingQty = openingEntry ? openingEntry.qty : null;
+
+    // Sold-out time from any entry with soldOutTime filled
+    const soldOutEntry = entries.find(e => e.soldOutTime);
+    const soldOutTime = soldOutEntry ? soldOutEntry.soldOutTime : '';
+
+    // Closing qty from 閉店 tag
+    const closingEntry = entries.find(e => e.tag === '閉店');
+    const closingQty = closingEntry ? closingEntry.qty : null;
+
+    // 追加: if there's a soldOutTime entry AND a later entry without soldOutTime with qty > 0
+    let addedAt = '';
+    if (soldOutEntry) {
+      const soldOutTime_ = soldOutEntry.timestamp;
+      const laterEntry = entries.find(e =>
+        !e.soldOutTime && e.qty > 0 && e.timestamp > soldOutTime_ && e.tag !== '閉店'
+      );
+      if (laterEntry) addedAt = soldOutTime; // time when sold out before restock
+
+      // Revised opening: 開局 qty + 追加 qty
+      if (laterEntry && openingEntry) {
+        // openingQty already set; add追加 batch
+        const addedQty = laterEntry.qty;
+        records.push({ date, name, openingQty: openingEntry.qty + addedQty, soldOutTime, closingQty, addedAt });
+        return;
+      }
+    }
+
+    records.push({ date, name, openingQty, soldOutTime, closingQty, addedAt });
+  });
+
+  return respond({ records });
+}
+
+function deleteOrder(data) {
+  const orderSheet  = SS.getSheetByName('叫貨單');
+  const detailSheet = SS.getSheetByName('叫貨明細');
+  const orderId = data.orderId;
+  // Delete from 叫貨單 (reverse to avoid row shift issues)
+  const orders = orderSheet.getLastRow() > 1
+    ? orderSheet.getRange(2, 1, orderSheet.getLastRow() - 1, 1).getValues() : [];
+  for (let i = orders.length - 1; i >= 0; i--) {
+    if (String(orders[i][0]) === orderId) {
+      orderSheet.deleteRow(i + 2);
+      break;
+    }
+  }
+  // Delete from 叫貨明細
+  if (detailSheet.getLastRow() > 1) {
+    const details = detailSheet.getRange(2, 1, detailSheet.getLastRow() - 1, 1).getValues();
+    for (let i = details.length - 1; i >= 0; i--) {
+      if (String(details[i][0]) === orderId) {
+        detailSheet.deleteRow(i + 2);
+      }
+    }
+  }
   return respond({ ok: true });
 }
 

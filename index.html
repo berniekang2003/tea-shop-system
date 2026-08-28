@@ -423,6 +423,7 @@ function renderNavbar(active) {
     { id:'ordersheet', label:'叫貨單', icon:'📋' },
     { id:'history', label:'歷史', icon:'🕐' },
     { id:'waste',   label:'報廢', icon:'🗑️' },
+    { id:'stats',   label:'統計', icon:'📊' },
   ];
   return `<div class="navbar">${items.map(i =>
     `<button class="nav-btn ${active===i.id?'active':''}" onclick="go('${i.id}')">
@@ -584,6 +585,10 @@ function renderInventory() {
           <input type="checkbox" id="isOpening" style="width:18px;height:18px;cursor:pointer">
           <span style="font-size:15px;font-weight:500">今日開局登記</span>
         </label>
+        <label style="display:flex;align-items:center;gap:10px;padding:4px 0;cursor:pointer;margin-top:6px">
+          <input type="checkbox" id="isClosing" style="width:18px;height:18px;cursor:pointer">
+          <span style="font-size:15px;font-weight:500">閉店盤點</span>
+        </label>
       </div>
       <div class="section-title">傳統原味（杯）</div>
       <div class="card">${activeRotating.map((item, i) => invRow(item, i)).join('')}</div>
@@ -613,10 +618,11 @@ async function saveInventory(btn) {
 
   if (!items.length) { showToast('請至少填寫一項'); return; }
   const isOpening = document.getElementById('isOpening')?.checked || false;
+  const isClosing = document.getElementById('isClosing')?.checked || false;
   btn.disabled = true; btn.textContent = '儲存中...';
 
   try {
-    const res = await apiPost({ action: 'saveInventory', date: todayStr(), items, isOpening });
+    const res = await apiPost({ action: 'saveInventory', date: todayStr(), items, isOpening, isClosing });
     if (res.ok) {
       const now = new Date();
       const timeStr = now.toTimeString().slice(0,5);
@@ -630,7 +636,7 @@ async function saveInventory(btn) {
         cachedDaily.inv = { items: state.inventory, openingItems: state.openingInventory, todayUpdated: true, updateTime: state.invUpdateTime };
         saveCache(cachedDaily);
       }
-      showToast(isOpening ? '開局登記完成 ✓' : '庫存登記完成 ✓');
+      showToast(isClosing ? '閉店盤點完成 ✓' : isOpening ? '開局登記完成 ✓' : '庫存登記完成 ✓');
       go('home');
     } else {
       showToast('儲存失敗：' + (res.error || ''));
@@ -1036,6 +1042,198 @@ async function togglePause(name, el) {
   }
 }
 
+// ── 統計 ──────────────────────────────────────
+function renderStats() {
+  const today = todayStr();
+  const d30 = (() => { const d = new Date(); d.setDate(d.getDate() - 29); return d.toISOString().slice(0,10).replace(/-/g,'/'); })();
+  return `
+    <div class="topbar"><div class="topbar-inner"><div class="topbar-title">完售紀錄統計</div></div></div>
+    <div class="content" style="padding-bottom:80px">
+      <div class="card" style="margin-bottom:10px">
+        <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px">
+          <div>
+            <div style="font-size:11px;color:#8e8e93;margin-bottom:4px">開始日期</div>
+            <input type="date" id="stats-start" value="${d30.replace(/\//g,'-')}" onchange="loadStats()" style="font-size:13px;padding:6px 8px;border-radius:8px;border:1px solid #e5e5ea;background:var(--bg,#f8f8f8);color:inherit;width:140px">
+          </div>
+          <div style="color:#8e8e93;padding-bottom:6px">—</div>
+          <div>
+            <div style="font-size:11px;color:#8e8e93;margin-bottom:4px">結束日期</div>
+            <input type="date" id="stats-end" value="${today.replace(/\//g,'-')}" onchange="loadStats()" style="font-size:13px;padding:6px 8px;border-radius:8px;border:1px solid #e5e5ea;background:var(--bg,#f8f8f8);color:inherit;width:140px">
+          </div>
+        </div>
+        <div style="font-size:11px;color:#8e8e93;margin-bottom:6px">品項選擇</div>
+        <div id="stats-chips" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+      </div>
+      <div class="card">
+        <div id="stats-legend" style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:12px;font-size:11px;color:#8e8e93"></div>
+        <div style="overflow-x:auto">
+          <svg id="stats-chart" width="100%" viewBox="0 0 620 300" preserveAspectRatio="xMidYMid meet"></svg>
+        </div>
+        <div style="font-size:11px;color:#8e8e93;text-align:center;margin-top:8px">
+          ● 實心=完售（上:開局數 下:完售時間）　○ 空心=未完售（上:開局數 下:紅字剩餘）　◆ 追加開桶
+        </div>
+      </div>
+    </div>
+    ${renderNavbar('stats')}`;
+}
+
+const STATS_COLORS = ['#007AFF','#34C759','#FF9F0A','#AF52DE','#FF3B30','#5AC8FA'];
+let statsData = [], statsActiveItems = [];
+
+function statsChipHtml(name, color, active) {
+  return `<span onclick="statsToggleItem('${name}')" id="stats-chip-${name}" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;user-select:none;background:${active?color:'#eef4ff'};color:${active?'#fff':color};transition:all 0.15s">
+    <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${active?'#fff':color}"></span>${name}</span>`;
+}
+
+function statsToggleItem(name) {
+  if (statsActiveItems.includes(name)) {
+    if (statsActiveItems.length === 1) return;
+    statsActiveItems = statsActiveItems.filter(x => x !== name);
+  } else {
+    statsActiveItems.push(name);
+  }
+  statsRender();
+}
+
+async function loadStats() {
+  const startEl = document.getElementById('stats-start');
+  const endEl   = document.getElementById('stats-end');
+  if (!startEl) return;
+  const startDate = startEl.value.replace(/-/g,'/');
+  const endDate   = endEl.value.replace(/-/g,'/');
+  const legend = document.getElementById('stats-legend');
+  if (legend) legend.innerHTML = '<span style="color:#8e8e93">載入中...</span>';
+  const res = await apiGet('getSoldOutHistory', { startDate, endDate });
+  if (res.error) { if (legend) legend.innerHTML = '載入失敗'; return; }
+  statsData = res.records || [];
+  // Collect unique items
+  const names = [...new Set(statsData.map(r => r.name))];
+  statsActiveItems = [...names];
+  statsRender();
+}
+
+function statsRender() {
+  const names = [...new Set(statsData.map(r => r.name))];
+  // Chips
+  const chipsEl = document.getElementById('stats-chips');
+  if (chipsEl) chipsEl.innerHTML = names.map((n,i) => statsChipHtml(n, STATS_COLORS[i % STATS_COLORS.length], statsActiveItems.includes(n))).join('');
+  // Legend
+  const legendEl = document.getElementById('stats-legend');
+  if (legendEl) legendEl.innerHTML = statsActiveItems.map((n,i) => {
+    const c = STATS_COLORS[names.indexOf(n) % STATS_COLORS.length];
+    return `<span style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:18px;height:2px;background:${c};border-radius:1px"></span>${n}</span>`;
+  }).join('');
+  statsDrawChart();
+}
+
+function statsDrawChart() {
+  const svg = document.getElementById('stats-chart');
+  if (!svg) return;
+  const W = 620, H = 300;
+  const PAD = { top: 20, right: 20, bottom: 36, left: 52 };
+  const cW = W - PAD.left - PAD.right, cH = H - PAD.top - PAD.bottom;
+  const CLOSING_MIN = 15 * 60 + 30;
+
+  // Get all dates in range
+  const allDates = [...new Set(statsData.map(r => r.date))].sort();
+  const n = allDates.length;
+  if (!n) { svg.innerHTML = '<text x="310" y="150" text-anchor="middle" font-size="13" fill="#8e8e93">無資料</text>'; return; }
+
+  const names = [...new Set(statsData.map(r => r.name))];
+  const activeCount = statsActiveItems.length;
+
+  function timeToMin(t) { if (!t) return null; const [h,m] = t.split(':').map(Number); return h*60+m; }
+  function minToLabel(m) { return Math.floor(m/60)+':'+ String(m%60).padStart(2,'0'); }
+
+  // Determine time range from actual data
+  const allMins = statsData.filter(r => r.soldOutTime).map(r => timeToMin(r.soldOutTime)).filter(Boolean);
+  const tMin = allMins.length ? Math.min(...allMins, CLOSING_MIN) - 30 : 660;
+  const tMax = Math.max(...allMins, CLOSING_MIN) + 30;
+  const tMinR = Math.floor(tMin/30)*30, tMaxR = Math.ceil(tMax/30)*30;
+
+  const xPos = i => PAD.left + (n > 1 ? (i / (n-1)) * cW : cW/2);
+  const yTime = m => PAD.top + ((m - tMinR) / (tMaxR - tMinR)) * cH;
+
+  let html = '';
+
+  // Grid + Y axis labels
+  for (let m = tMinR; m <= tMaxR; m += 30) {
+    const y = yTime(m);
+    const major = m % 60 === 0;
+    html += `<line stroke="${major?'#e5e5ea':'#f0f0f4'}" stroke-width="${major?1:0.5}" x1="${PAD.left}" y1="${y}" x2="${PAD.left+cW}" y2="${y}"/>`;
+    if (major) html += `<text font-size="10" fill="#8e8e93" x="${PAD.left-6}" y="${y+3.5}" text-anchor="end" font-family="system-ui">${minToLabel(m)}</text>`;
+  }
+
+  // Closing line
+  const yClose = yTime(CLOSING_MIN);
+  html += `<line stroke="#FF3B30" stroke-width="1.5" stroke-dasharray="5,4" x1="${PAD.left}" y1="${yClose}" x2="${PAD.left+cW}" y2="${yClose}" opacity="0.7"/>`;
+  html += `<text font-size="9" fill="#FF3B30" x="${PAD.left+cW+4}" y="${yClose+3.5}" font-family="system-ui">打烊</text>`;
+
+  // X axis
+  allDates.forEach((d, i) => {
+    const label = d.slice(5).replace('/', '/');
+    html += `<text font-size="10" fill="#8e8e93" x="${xPos(i)}" y="${PAD.top+cH+14}" text-anchor="middle" font-family="system-ui">${label}</text>`;
+  });
+  html += `<line stroke="#e5e5ea" x1="${PAD.left}" y1="${PAD.top}" x2="${PAD.left}" y2="${PAD.top+cH}"/>`;
+  html += `<line stroke="#e5e5ea" x1="${PAD.left}" y1="${PAD.top+cH}" x2="${PAD.left+cW}" y2="${PAD.top+cH}"/>`;
+
+  function pill(x, y, text, color) {
+    const w = String(text).length * 5.5 + 8, h = 13;
+    return `<rect x="${x-w/2}" y="${y-h+2}" width="${w}" height="${h}" rx="3" fill="white" opacity="0.85"/>` +
+           `<text font-size="9" fill="${color}" x="${x}" y="${y}" text-anchor="middle" font-weight="600" font-family="system-ui">${text}</text>`;
+  }
+
+  // Per item
+  statsActiveItems.forEach((name, aidx) => {
+    const color = STATS_COLORS[names.indexOf(name) % STATS_COLORS.length];
+    const dotOffset = (aidx - (activeCount-1)/2) * 4;
+    const lblOffset = (aidx - (activeCount-1)/2) * 22;
+
+    // Line points
+    const pts = allDates.map((d, i) => {
+      const rec = statsData.find(r => r.date === d && r.name === name);
+      if (!rec) return null;
+      const m = rec.soldOutTime ? timeToMin(rec.soldOutTime) : CLOSING_MIN;
+      return `${xPos(i)+dotOffset},${yTime(m)}`;
+    }).filter(Boolean).join(' ');
+    if (pts) html += `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" opacity="0.85"/>`;
+
+    // Dots
+    allDates.forEach((d, i) => {
+      const rec = statsData.find(r => r.date === d && r.name === name);
+      if (!rec) return;
+      const hasSoldOut = !!rec.soldOutTime;
+      const m = hasSoldOut ? timeToMin(rec.soldOutTime) : CLOSING_MIN;
+      const cx = xPos(i) + dotOffset, cy = yTime(m);
+      const lx = xPos(i) + lblOffset;
+
+      if (hasSoldOut) {
+        html += `<circle cx="${cx}" cy="${cy}" r="5.5" fill="${color}"/>`;
+        if (rec.openingQty !== null) html += pill(lx, cy-10, rec.openingQty, color);
+        html += pill(lx, cy+17, rec.soldOutTime, color);
+      } else {
+        html += `<circle cx="${cx}" cy="${cy}" r="5.5" fill="white" stroke="${color}" stroke-width="2"/>`;
+        if (rec.openingQty !== null) html += pill(lx, cy-10, rec.openingQty, color);
+        if (rec.closingQty !== null) {
+          const w2 = String(rec.closingQty).length * 5.5 + 8, h2 = 13;
+          html += `<rect x="${lx-w2/2}" y="${cy+4}" width="${w2}" height="${h2}" rx="3" fill="white" opacity="0.85"/>`;
+          html += `<text font-size="9" fill="#FF3B30" x="${lx}" y="${cy+14}" text-anchor="middle" font-weight="600" font-family="system-ui">${rec.closingQty}</text>`;
+        }
+      }
+
+      // 追加菱形
+      if (rec.addedAt) {
+        const am = timeToMin(rec.addedAt);
+        const ay = yTime(am), s = 6;
+        html += `<polygon points="${cx},${ay-s} ${cx+s},${ay} ${cx},${ay+s} ${cx-s},${ay}" fill="${color}" opacity="0.9"/>`;
+        html += pill(lx, ay-12, '追加 '+rec.addedAt, color);
+      }
+    });
+  });
+
+  svg.innerHTML = html;
+}
+
 // ── 歷史 ──────────────────────────────────────
 function renderHistory() {
   return `
@@ -1269,6 +1467,7 @@ function render() {
   else if (s === 'arrival')    app.innerHTML = renderArrival();
   else if (s === 'history')  { app.innerHTML = renderHistory(); loadHistory(); }
   else if (s === 'waste')    { initWasteType(); app.innerHTML = renderWaste(); loadWasteHistory(); }
+  else if (s === 'stats')  { app.innerHTML = renderStats(); loadStats(); }
   else if (s === 'settings')   app.innerHTML = renderSettings();
 }
 
