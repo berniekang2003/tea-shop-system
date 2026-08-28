@@ -525,6 +525,7 @@ function renderHome() {
 
       <div class="section-title">固定茶品</div>
       <div class="card">${fixed.map(teaCard).join('')}</div>
+      <div style="text-align:center;color:#c7c7cc;font-size:11px;padding:4px 0 8px">v1.2</div>
     </div>
     <div class="status-bar">
       <div class="status-item">
@@ -542,7 +543,6 @@ function renderHome() {
         <div class="status-item-val ${arrivalDone?'done':shippingDone?'waiting':'pending'}">${arrivalDone ? '完結✓' : shippingDone ? '待確認' : '等待中'}</div>
       </div>
     </div>
-    <div style="text-align:center;color:#c7c7cc;font-size:11px;padding:4px 0 16px">v1.2</div>
     ${renderNavbar('home')}`;
 }
 
