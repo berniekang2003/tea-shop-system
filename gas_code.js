@@ -138,7 +138,7 @@ function getInventory(date) {
   rows.forEach(r => {
     const name = toStr(r[2]);
     if (!name) return;
-    const entry = { name, qty: r[3], openDate: toStr(r[4]), soldOutTime: r[5] instanceof Date ? Utilities.formatDate(r[5], Session.getScriptTimeZone(), 'HH:mm') : toStr(r[5]) };
+    const entry = { name, qty: r[3], openDate: toStr(r[4]), soldOutTime: r[5] instanceof Date ? Utilities.formatDate(r[5], Session.getScriptTimeZone(), 'HH:mm') : toStr(r[5]), tag: toStr(r[6]) };
     latestMap[name] = entry;
     if (toStr(r[0]) === targetDate && toStr(r[6]) === '開局') {
       openingMap[name] = entry;
@@ -212,10 +212,8 @@ function getOrder(params) {
 function confirmShipping(data) {
   const orderSheet  = SS.getSheetByName('叫貨單');
   const detailSheet = SS.getSheetByName('叫貨明細');
-  const invSheet    = SS.getSheetByName('庫存登記');
   const orderId = data.orderId;
 
-  // 更新叫貨單狀態
   const orders = orderSheet.getRange(2, 1, orderSheet.getLastRow() - 1, 6).getValues();
   for (let i = 0; i < orders.length; i++) {
     if (String(orders[i][0]) === orderId) {
@@ -225,49 +223,14 @@ function confirmShipping(data) {
     }
   }
 
-  // 更新明細出貨量，同時收集茶品出貨資訊
   const details = detailSheet.getRange(2, 1, detailSheet.getLastRow() - 1, 6).getValues();
-  const shippedTea = {};
   for (let i = 0; i < details.length; i++) {
     if (String(details[i][0]) === orderId) {
       const item = data.items.find(d => d.name === toStr(details[i][2]));
       if (item !== undefined) {
         if (item.requested !== undefined) detailSheet.getRange(i + 2, 4).setValue(item.requested);
         detailSheet.getRange(i + 2, 5).setValue(item.shipped);
-        if (toStr(details[i][1]) === '茶品' && Number(item.shipped) > 0) {
-          shippedTea[toStr(details[i][2])] = Number(item.shipped);
-        }
       }
-    }
-  }
-
-  // 自動更新庫存：出貨量加到現有庫存，保留開桶日與完售時間
-  if (Object.keys(shippedTea).length > 0) {
-    const invRows = invSheet.getLastRow() > 1
-      ? invSheet.getRange(2, 1, invSheet.getLastRow() - 1, 7).getValues()
-      : [];
-    const currentInv = {};
-    invRows.forEach(r => {
-      const name = toStr(r[2]);
-      if (name) currentInv[name] = {
-        qty: Number(r[3]) || 0,
-        openDate: toStr(r[4]),
-        soldOutTime: r[5] instanceof Date ? Utilities.formatDate(r[5], Session.getScriptTimeZone(), 'HH:mm') : toStr(r[5])
-      };
-    });
-    const timestamp = now();
-    const todayDate = today();
-    const newRows = Object.entries(shippedTea).map(([name, shipped]) => {
-      const cur = currentInv[name] || { qty: 0, openDate: '', soldOutTime: '' };
-      return [
-        "'" + todayDate, timestamp, name, cur.qty + shipped,
-        cur.openDate ? ("'" + cur.openDate) : '',
-        cur.soldOutTime ? ("'" + cur.soldOutTime) : '',
-        '補給後'
-      ];
-    });
-    if (newRows.length > 0) {
-      invSheet.getRange(invSheet.getLastRow() + 1, 1, newRows.length, 7).setValues(newRows);
     }
   }
 
@@ -290,10 +253,44 @@ function confirmArrival(data) {
     }
   }
   const details = detailSheet.getRange(2, 1, detailSheet.getLastRow() - 1, 6).getValues();
+  const arrivedTea = {};
   for (let i = 0; i < details.length; i++) {
     if (String(details[i][0]) === orderId) {
       const item = data.items.find(d => d.name === toStr(details[i][2]));
-      if (item !== undefined) detailSheet.getRange(i + 2, 6).setValue(item.arrived);
+      if (item !== undefined) {
+        detailSheet.getRange(i + 2, 6).setValue(item.arrived);
+        if (toStr(details[i][1]) === '茶品' && Number(item.arrived) > 0) {
+          arrivedTea[toStr(details[i][2])] = Number(item.arrived);
+        }
+      }
+    }
+  }
+  if (Object.keys(arrivedTea).length > 0) {
+    const invSheet = SS.getSheetByName('庫存登記');
+    const invRows = invSheet.getLastRow() > 1
+      ? invSheet.getRange(2, 1, invSheet.getLastRow() - 1, 7).getValues() : [];
+    const currentInv = {};
+    invRows.forEach(r => {
+      const name = toStr(r[2]);
+      if (name) currentInv[name] = {
+        qty: Number(r[3]) || 0,
+        openDate: toStr(r[4]),
+        soldOutTime: r[5] instanceof Date ? Utilities.formatDate(r[5], Session.getScriptTimeZone(), 'HH:mm') : toStr(r[5])
+      };
+    });
+    const timestamp = now();
+    const todayDate = today();
+    const newRows = Object.entries(arrivedTea).map(([name, arrived]) => {
+      const cur = currentInv[name] || { qty: 0, openDate: '', soldOutTime: '' };
+      return [
+        "'" + todayDate, timestamp, name, cur.qty + arrived,
+        cur.openDate ? ("'" + cur.openDate) : '',
+        cur.soldOutTime ? ("'" + cur.soldOutTime) : '',
+        '到貨後'
+      ];
+    });
+    if (newRows.length > 0) {
+      invSheet.getRange(invSheet.getLastRow() + 1, 1, newRows.length, 7).setValues(newRows);
     }
   }
   sendLineNotify('✅ 分店已確認到貨，本單完結。');
@@ -462,12 +459,29 @@ function updateOrder(data) {
 }
 
 function addWaste(data) {
-  const sheet = SS.getSheetByName('報廢紀錄');
+  const wasteSheet = SS.getSheetByName('報廢紀錄');
   const id = 'W' + Date.now();
   const dt = now();
   const date = dt.split(' ')[0];
   const time = dt.split(' ')[1];
-  sheet.appendRow([id, date, time, data.cat, data.name, Number(data.qty) || 1, data.reason || '']);
+  wasteSheet.appendRow([id, date, time, data.cat, data.name, Number(data.qty) || 1, data.reason || '']);
+
+  // 若是茶品報廢，自動寫一筆庫存歸零
+  if (data.cat === '茶品') {
+    const invSheet = SS.getSheetByName('庫存登記');
+    const todayDate = today();
+    const timestamp = now();
+    const invRows = invSheet.getLastRow() > 1
+      ? invSheet.getRange(2, 1, invSheet.getLastRow() - 1, 7).getValues() : [];
+    const cur = {};
+    invRows.forEach(r => { const n = toStr(r[2]); if (n) cur[n] = { openDate: toStr(r[4]) }; });
+    const existing = cur[data.name] || { openDate: '' };
+    invSheet.getRange(invSheet.getLastRow() + 1, 1, 1, 7).setValues([[
+      "'" + todayDate, timestamp, data.name, 0,
+      existing.openDate ? ("'" + existing.openDate) : '',
+      '', '報廢'
+    ]]);
+  }
   return respond({ ok: true });
 }
 

@@ -461,18 +461,22 @@ function renderHome() {
     const qty = inv ? Number(inv.qty) : null;
     const openDate = inv ? inv.openDate : '';
     const soldOutTime = inv ? (inv.soldOutTime || '') : '';
+    const invTag = inv ? (inv.tag || '') : '';
+    const isWasted = invTag === '報廢';
     const openingInv = (state.openingInventory || []).find(i => i.name.trim() === item.name.trim());
     const openingQty = openingInv ? Number(openingInv.qty) : null;
     const pct = qty !== null && qty > 0 ? qty / item.cups : 0;
     const cls = qty !== null && qty > 0 ? levelClass(pct) : 'low';
     const fillPct = Math.round(pct * 100);
     const st = invStatus(item.name);
-    const statusTag = st === 'soldout'
+    const statusTag = isWasted
+      ? '<span style="font-size:11px;background:#8e8e93;color:#fff;border-radius:4px;padding:1px 6px;margin-left:4px">報廢</span>'
+      : st === 'soldout'
       ? '<span style="font-size:11px;background:#ff3b30;color:#fff;border-radius:4px;padding:1px 6px;margin-left:4px">售完</span>'
       : st === 'new'
       ? '<span style="font-size:11px;background:#8e8e93;color:#fff;border-radius:4px;padding:1px 6px;margin-left:4px">候補</span>'
       : '';
-    const timeDisplay = soldOutTime ? soldOutTime.slice(0,5) : '';
+    const timeDisplay = !isWasted && soldOutTime ? soldOutTime.slice(0,5) : '';
     const soldOutTag = timeDisplay
       ? `<span style="font-size:11px;background:#ff3b30;color:#fff;border-radius:4px;padding:1px 6px;margin-left:4px">[${timeDisplay}]</span>` : '';
 
