@@ -542,6 +542,7 @@ function renderHome() {
         <div class="status-item-val ${arrivalDone?'done':shippingDone?'waiting':'pending'}">${arrivalDone ? '完結✓' : shippingDone ? '待確認' : '等待中'}</div>
       </div>
     </div>
+    <div style="text-align:center;color:#c7c7cc;font-size:11px;padding:4px 0 16px">v1.2</div>
     ${renderNavbar('home')}`;
 }
 
@@ -1464,7 +1465,7 @@ function render() {
     return;
   }
   const s = state.screen;
-  if      (s === 'home')       app.innerHTML = renderHome() + '<div style="text-align:center;color:#c7c7cc;font-size:11px;padding:8px 0 32px">v1.2</div>';
+  if      (s === 'home')       app.innerHTML = renderHome();
   else if (s === 'inventory')  app.innerHTML = renderInventory();
   else if (s === 'order')      app.innerHTML = renderOrder();
   else if (s === 'ordersheet') app.innerHTML = renderOrderSheet();
