@@ -383,6 +383,9 @@ function getInvItem(name) { return state.inventory.find(i => i.name.trim() === n
 function invStatus(name) {
   const inv = getInvItem(name);
   if (!inv) return 'new';
+  // 今天沒有開局記錄 → 未上架，不視為售完
+  const hasOpening = (state.openingInventory || []).some(i => i.name.trim() === name.trim());
+  if (!hasOpening && Number(inv.qty) === 0) return 'new';
   return Number(inv.qty) > 0 ? 'active' : 'soldout';
 }
 
@@ -475,7 +478,7 @@ function renderHome() {
       : st === 'soldout'
       ? '<span style="font-size:11px;background:#ff3b30;color:#fff;border-radius:4px;padding:1px 6px;margin-left:4px">售完</span>'
       : st === 'new'
-      ? '<span style="font-size:11px;background:#8e8e93;color:#fff;border-radius:4px;padding:1px 6px;margin-left:4px">候補</span>'
+      ? '<span style="font-size:11px;background:#8e8e93;color:#fff;border-radius:4px;padding:1px 6px;margin-left:4px">未上架</span>'
       : '';
     const timeDisplay = !isWasted && soldOutTime ? soldOutTime.slice(0,5) : '';
     const soldOutTag = timeDisplay
