@@ -446,18 +446,6 @@ function renderHome() {
   const shippingDone = order && (order.status === '已出貨' || order.status === '已完結');
   const arrivalDone = order && order.status === '已完結';
 
-  const nonPaused = rotatingAll.filter(r => !r.paused);
-  const nextItem = nextRotationItem();
-
-  const rotStrip = rotatingAll.map(r => {
-    const st = invStatus(r.name);
-    const isNext = nextItem && r.name === nextItem.name && st !== 'active';
-    const cls = st === 'active' ? 'active' : isNext ? 'next' : 'standby';
-    return `<span class="rot-chip ${cls} ${r.paused?'paused':''}">${r.name}${isNext?' ↓':''}</span>`;
-  }).join('');
-
-  const nextHint = nextItem
-    ? `<div class="rot-hint">🔄 下一輪替建議：<strong>${nextItem.name}</strong></div>` : '';
 
   function teaCard(item) {
     const inv = getInvItem(item.name);
@@ -522,10 +510,8 @@ function renderHome() {
         </button>
       </div>
 
-      <div class="section-title">傳統原味輪替</div>
-      <div class="rot-strip">${rotStrip}</div>
-      ${nextHint}
-      <div class="card">${nonPaused.map(teaCard).join('') || '<div style="padding:12px 0;color:#8e8e93">無品項</div>'}</div>
+      <div class="section-title">傳統原味</div>
+      <div class="card">${rotatingAll.map(teaCard).join('') || '<div style="padding:12px 0;color:#8e8e93">無品項</div>'}</div>
 
       <div class="section-title">固定茶品</div>
       <div class="card">${fixed.map(teaCard).join('')}</div>
