@@ -458,11 +458,12 @@ function renderHome() {
 
   function teaCard(item) {
     const inv = getInvItem(item.name);
-    const qty = inv ? Number(inv.qty) : null;
-    const openDate = inv ? inv.openDate : '';
-    const soldOutTime = inv ? (inv.soldOutTime || '') : '';
     const invTag = inv ? (inv.tag || '') : '';
     const isWasted = invTag === '報廢';
+    const rawQty = inv ? Number(inv.qty) : null;
+    const qty = isWasted ? 0 : rawQty;  // 報廢品顯示 0，但資料庫保留實際數字
+    const openDate = inv ? inv.openDate : '';
+    const soldOutTime = inv ? (inv.soldOutTime || '') : '';
     const openingInv = (state.openingInventory || []).find(i => i.name.trim() === item.name.trim());
     const openingQty = openingInv ? Number(openingInv.qty) : null;
     const pct = qty !== null && qty > 0 ? qty / item.cups : 0;
@@ -1482,6 +1483,18 @@ function render() {
 }
 
 loadAll();
+
+// 每 60 秒背景刷新首頁資料，讓多人操作時數字保持同步
+setInterval(async () => {
+  if (state.screen !== 'home') return;
+  try {
+    const daily = await apiGet('getDailyData', { date: todayStr() });
+    if (daily.error) return;
+    applyDaily(daily);
+    saveCache(daily);
+    render();
+  } catch(e) {}
+}, 60000);
 </script>
 </body>
 </html>
