@@ -682,11 +682,6 @@ function renderOrder() {
   const existingOrder = isEdit ? state.order : null;
 
   const nonPaused = rotatingAll.filter(r => !r.paused);
-  const nextItem = nextRotationItem();
-
-  const rotHint = nextItem
-    ? `<div class="rot-hint">🔄 系統建議補入：<strong>${nextItem.name}</strong>（下一輪替）</div>` : '';
-
   function getExistingQty(name, cat) {
     if (!existingOrder) return null;
     const found = existingOrder.items.find(i => i.name === name && i.cat === cat);
@@ -695,14 +690,12 @@ function renderOrder() {
 
   function teaRow(item, idx) {
     const st = invStatus(item.name);
-    const isNext = nextItem && item.name === nextItem.name;
     const isSoldOut = st === 'soldout';
     const existQty = getExistingQty(item.name, '茶品');
     let tagHtml = '';
     let inputCls = '';
-    let defaultVal = existQty !== null ? existQty : (isNext ? '1' : '');
+    let defaultVal = existQty !== null ? existQty : '';
     let opacity = '';
-    if (isNext && existQty === null) { tagHtml = '<span class="field-tag">建議補入</span>'; inputCls = 'suggested'; }
     if (isSoldOut) { tagHtml = '<span style="font-size:11px;color:#8e8e93;margin-left:4px">售完</span>'; opacity = 'opacity:0.5;'; }
     return `<div class="field-row" style="${opacity}">
       <span class="field-name">${item.name}${tagHtml}</span>
@@ -743,7 +736,6 @@ function renderOrder() {
       ${isEdit ? `<div class="topbar-sub">上次申請時間：${requestTime}</div>` : ''}
     </div>
     <div class="content">
-      ${rotHint}
       <div class="section-title">傳統原味（杯）</div>
       <div class="card">
         ${rotatingAll.map((r, i) => teaRow(r, i)).join('')}
