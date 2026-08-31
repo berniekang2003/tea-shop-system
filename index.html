@@ -512,16 +512,12 @@ function renderHome() {
 
       <div class="section-title">傳統原味</div>
       ${(() => {
-        const today = todayStr();
         const alertItems = rotatingAll.filter(item => {
           const inv = getInvItem(item.name);
           const openDate = inv ? (inv.openDate || '') : '';
           if (!openDate) return true;
-          const parts = openDate.split('/');
-          if (parts.length < 3) return true;
-          const d = new Date(parts[0], parts[1]-1, parts[2]);
-          const now = new Date(today.slice(0,4), today.slice(4,6)-1, today.slice(6,8));
-          const days = Math.floor((now - d) / 86400000);
+          const days = calcDaysOpen(openDate);
+          if (days === null) return true;
           return days > 6;
         });
         if (alertItems.length === 0) return '';
