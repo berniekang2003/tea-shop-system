@@ -530,13 +530,12 @@ function renderHome() {
           const inv = getInvItem(item.name);
           const openDate = inv ? (inv.openDate || '') : '';
           const label = !openDate ? '未填' : openDate.slice(5).replace('/','/');
-          const isLastRow = idx >= alertItems.length - (alertItems.length % cols || cols);
           const col = idx % cols;
           const isLastCol = col === cols - 1;
           const isVeryLast = idx === alertItems.length - 1;
           const remainder = alertItems.length % cols;
           const inLastRow = remainder === 0 ? idx >= alertItems.length - cols : idx >= alertItems.length - remainder;
-          return `<div style="padding:10px 10px;border-right:${isLastCol||isVeryLast?'none':'0.5px solid #e5e5ea'};border-bottom:${inLastRow?'none':'0.5px solid #e5e5ea'}${isVeryLast&&remainder===1?';grid-column:span 3':isVeryLast&&remainder===2?';grid-column:span 1':''}">
+          return `<div style="padding:10px 10px;border-right:${isLastCol||isVeryLast?'none':'0.5px solid #e5e5ea'};border-bottom:${inLastRow?'none':'0.5px solid #e5e5ea'}${isVeryLast&&remainder===1?';grid-column:span 3':isVeryLast&&remainder===2?';grid-column:span 2':''}">
             <div style="font-size:11px;color:#8e8e93;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${item.name}</div>
             <div style="font-size:12px;font-weight:500;color:${openDate?'#ff9500':'#8e8e93'}">${label}</div>
           </div>`;
