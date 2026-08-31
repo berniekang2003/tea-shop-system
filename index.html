@@ -511,6 +511,24 @@ function renderHome() {
       </div>
 
       <div class="section-title">傳統原味</div>
+      ${(() => {
+        const cells = rotatingAll.map((item, idx) => {
+          const inv = getInvItem(item.name);
+          const openDate = inv ? (inv.openDate || '') : '';
+          const isToday = openDate && openDate.replace(/\//g,'') === todayStr();
+          const label = !openDate ? '—'
+            : isToday ? '<span style="color:#34c759">今日開桶</span>'
+            : openDate.slice(5).replace('/','/');
+          const isLast = idx === rotatingAll.length - 1;
+          const isOdd = rotatingAll.length % 2 === 1;
+          const noBottom = isLast && isOdd;
+          return `<div style="padding:10px 14px;border-right:${idx%2===0?'0.5px solid #e5e5ea':'none'};border-bottom:${noBottom?'none':'0.5px solid #e5e5ea'}${isLast&&isOdd?';grid-column:span 2':''}">
+            <div style="font-size:12px;color:#8e8e93;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${item.name}</div>
+            <div style="font-size:13px;font-weight:500;color:#1c1c1e">${label}</div>
+          </div>`;
+        });
+        return `<div style="background:#fff;border:1px solid #e5e5ea;border-radius:12px;display:grid;grid-template-columns:1fr 1fr;margin-bottom:10px;overflow:hidden">${cells.join('')}</div>`;
+      })()}
       <div class="card">${rotatingAll.map(teaCard).join('') || '<div style="padding:12px 0;color:#8e8e93">無品項</div>'}</div>
 
       <div class="section-title">固定茶品</div>
