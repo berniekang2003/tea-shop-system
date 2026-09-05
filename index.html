@@ -678,7 +678,9 @@ async function saveInventory(btn) {
 // ── 叫貨申請 ──────────────────────────────────
 function renderOrder() {
   const { fixed, rotatingAll } = state.items;
-  const isEdit = !!(state.order && (state.order.status === '已申請' || state.order.status === '已出貨'));
+  const todayPrefix = todayStr().replace(/\//g, '');
+  const isToday = !!(state.order && state.order.orderId && state.order.orderId.startsWith(todayPrefix));
+  const isEdit = isToday && (state.order.status === '已申請' || state.order.status === '已出貨');
   const existingOrder = isEdit ? state.order : null;
 
   const nonPaused = rotatingAll.filter(r => !r.paused);
