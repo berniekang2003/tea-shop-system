@@ -1226,13 +1226,14 @@ function statsDrawChart() {
       const cx = xPos(i) + dotOffset, cy = yTime(m);
       const lx = xPos(i) + lblOffset;
 
+      const qtyOffset = rec.addedAt ? -24 : -10;
       if (hasSoldOut) {
         html += `<circle cx="${cx}" cy="${cy}" r="5.5" fill="${color}"/>`;
-        if (rec.openingQty !== null) html += pill(lx, cy-10, rec.openingQty, color);
+        if (rec.openingQty !== null) html += pill(lx, cy+qtyOffset, rec.openingQty, color);
         html += pill(lx, cy+17, rec.soldOutTime, color);
       } else {
         html += `<circle cx="${cx}" cy="${cy}" r="5.5" fill="white" stroke="${color}" stroke-width="2"/>`;
-        if (rec.openingQty !== null) html += pill(lx, cy-10, rec.openingQty, color);
+        if (rec.openingQty !== null) html += pill(lx, cy+qtyOffset, rec.openingQty, color);
         if (rec.closingQty !== null) {
           const w2 = String(rec.closingQty).length * 5.5 + 8, h2 = 13;
           html += `<rect x="${lx-w2/2}" y="${cy+4}" width="${w2}" height="${h2}" rx="3" fill="white" opacity="0.85"/>`;
