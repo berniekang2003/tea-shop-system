@@ -819,10 +819,26 @@ async function updateOrder(btn) {
 // ── 叫貨單 ────────────────────────────────────
 function renderOrderSheet() {
   const order = state.order;
-  if (!order) return `
+  const todayPrefix = todayStr().replace(/\//g, '');
+  const isTodayOrder = !!(order && order.orderId && order.orderId.startsWith(todayPrefix));
+
+  if (!order || (!isTodayOrder && order.status !== '已出貨')) return `
     <div class="topbar"><div class="topbar-inner"><div class="topbar-title">叫貨單</div></div></div>
     <div class="content"><div class="loading">今日尚無叫貨申請</div></div>
     ${renderNavbar('ordersheet')}`;
+
+  // 跨日到貨確認：只顯示精簡提示，不顯示完整舊訂單
+  if (!isTodayOrder && order.status === '已出貨') return `
+    <div class="topbar"><div class="topbar-inner"><div class="topbar-title">叫貨單</div></div></div>
+    <div class="content">
+      <div class="loading">今日尚無叫貨申請</div>
+      <div style="margin-top:16px;padding:16px;background:#fff;border-radius:12px;border:1px solid #e5e5ea;text-align:center">
+        <div style="font-size:13px;color:#8e8e93;margin-bottom:12px">昨日出貨單待確認到貨</div>
+        <button class="btn-primary" style="background:#34c759" onclick="go('arrival')">確認到貨</button>
+      </div>
+    </div>
+    ${renderNavbar('ordersheet')}`;
+
 
   const teaItems = order.items.filter(i => i.cat === '茶品');
   const ingItems  = order.items.filter(i => i.cat === '配料');
