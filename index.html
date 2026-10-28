@@ -4,117 +4,166 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>出攤管理</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --bg: #f0f0f5;
+      --card: #ffffff;
+      --border: rgba(0,0,0,0.08);
+      --text: #111827;
+      --text2: #6b7280;
+      --text3: #9ca3af;
+      --blue: #4f7cff;
+      --blue-light: #eef2ff;
+      --green: #22c55e;
+      --green-light: #f0fdf4;
+      --red: #ef4444;
+      --red-light: #fef2f2;
+      --orange: #f97316;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow: 0 4px 12px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.04);
+    }
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif; background: #f2f2f7; color: #1c1c1e; min-height: 100vh; padding-bottom: 80px; }
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding-bottom: 88px; }
 
     /* NAV */
-    .nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(249,249,249,0.94); border-top: 1px solid #d1d1d6; backdrop-filter: saturate(180%) blur(20px); display: flex; z-index: 100; padding-bottom: env(safe-area-inset-bottom); }
-    .nav-tab { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 8px 0 6px; gap: 3px; font-size: 10px; color: #8e8e93; cursor: pointer; }
-    .nav-tab.active { color: #007AFF; }
-    .nav-tab svg { width: 24px; height: 24px; }
+    .nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255,255,255,0.92); border-top: 1px solid var(--border); backdrop-filter: blur(20px) saturate(180%); display: flex; z-index: 100; padding-bottom: env(safe-area-inset-bottom); }
+    .nav-tab { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 10px 0 7px; gap: 3px; font-size: 10px; font-weight: 500; color: var(--text3); cursor: pointer; transition: color 0.15s; }
+    .nav-tab.active { color: var(--blue); }
+    .nav-tab svg { width: 22px; height: 22px; }
+    .nav-tab.active svg { stroke: var(--blue); }
 
     /* HEADER */
-    .header { background: rgba(249,249,249,0.94); backdrop-filter: saturate(180%) blur(20px); border-bottom: 1px solid #d1d1d6; padding: 12px 16px 10px; position: sticky; top: 0; z-index: 50; }
-    .header h1 { font-size: 17px; font-weight: 600; text-align: center; }
-    .header-sub { font-size: 12px; color: #8e8e93; text-align: center; margin-top: 2px; }
+    .header { background: rgba(255,255,255,0.92); backdrop-filter: blur(20px) saturate(180%); border-bottom: 1px solid var(--border); padding: 14px 20px 12px; position: sticky; top: 0; z-index: 50; }
+    .header h1 { font-size: 17px; font-weight: 700; text-align: center; letter-spacing: -0.3px; }
+    .header-sub { font-size: 12px; color: var(--text2); text-align: center; margin-top: 2px; }
     .header-row { display: flex; align-items: center; justify-content: space-between; }
-    .back-btn { font-size: 17px; color: #007AFF; cursor: pointer; padding: 2px 0; display: flex; align-items: center; gap: 4px; }
+    .back-btn { font-size: 15px; color: var(--blue); font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 4px; }
 
-    /* CARDS */
+    /* HERO CARD (home screen) */
+    .hero-card { background: linear-gradient(135deg, #4f7cff 0%, #7c3aed 100%); border-radius: 20px; padding: 24px 20px; color: #fff; margin: 16px 16px 0; box-shadow: 0 8px 24px rgba(79,124,255,0.35); }
+    .hero-label { font-size: 12px; font-weight: 600; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
+    .hero-title { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+    .hero-sub { font-size: 14px; opacity: 0.8; margin-top: 4px; }
+    .hero-badge { display: inline-flex; align-items: center; gap: 5px; background: rgba(255,255,255,0.22); backdrop-filter: blur(4px); border-radius: 20px; padding: 4px 12px; font-size: 12px; font-weight: 600; margin-top: 12px; }
+    .hero-dot { width: 6px; height: 6px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 6px #4ade80; }
+
+    /* STAT GRID */
+    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 16px 0; }
+    .stat-card { background: var(--card); border-radius: 16px; padding: 16px; box-shadow: var(--shadow-sm); }
+    .stat-card-label { font-size: 12px; font-weight: 500; color: var(--text2); margin-bottom: 6px; }
+    .stat-card-value { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; font-variant-numeric: tabular-nums; }
+    .stat-card-value.blue { color: var(--blue); }
+    .stat-card-value.green { color: var(--green); }
+    .stat-card-value.red { color: var(--red); }
+    .stat-card-value.orange { color: var(--orange); }
+    .stat-card-sub { font-size: 11px; color: var(--text3); margin-top: 3px; }
+
+    /* SECTION */
     .section { margin: 16px 16px 0; }
-    .section-label { font-size: 13px; color: #8e8e93; font-weight: 500; padding: 0 4px 6px; text-transform: uppercase; letter-spacing: 0.3px; }
-    .card { background: #fff; border-radius: 12px; overflow: hidden; }
-    .card-row { padding: 12px 16px; border-bottom: 1px solid #f2f2f7; display: flex; align-items: center; gap: 12px; }
+    .section-label { font-size: 12px; color: var(--text2); font-weight: 600; padding: 0 2px 7px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    /* CARD */
+    .card { background: var(--card); border-radius: 16px; overflow: hidden; box-shadow: var(--shadow-sm); }
+    .card-row { padding: 13px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
     .card-row:last-child { border-bottom: none; }
-    .card-row-label { font-size: 17px; flex: 1; }
-    .card-row-value { font-size: 17px; color: #8e8e93; }
+    .card-row-label { font-size: 15px; flex: 1; font-weight: 500; }
+    .card-row-value { font-size: 15px; color: var(--text2); }
 
     /* BUTTONS */
-    .btn { width: 100%; padding: 14px; border-radius: 12px; border: none; font-size: 17px; font-weight: 600; cursor: pointer; margin-top: 12px; transition: opacity 0.1s; }
-    .btn:active { opacity: 0.7; }
-    .btn-primary { background: #007AFF; color: #fff; }
-    .btn-success { background: #34c759; color: #fff; }
-    .btn-danger { background: #ff3b30; color: #fff; }
-    .btn-secondary { background: #e5e5ea; color: #1c1c1e; }
-    .btn-sm { padding: 8px 16px; font-size: 14px; border-radius: 8px; width: auto; margin-top: 0; }
+    .btn { width: 100%; padding: 15px; border-radius: 14px; border: none; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 10px; transition: transform 0.1s, opacity 0.1s; letter-spacing: -0.2px; }
+    .btn:active { transform: scale(0.98); opacity: 0.85; }
+    .btn-primary { background: linear-gradient(135deg, #4f7cff, #6366f1); color: #fff; box-shadow: 0 4px 12px rgba(79,124,255,0.35); }
+    .btn-success { background: linear-gradient(135deg, #22c55e, #16a34a); color: #fff; box-shadow: 0 4px 12px rgba(34,197,94,0.3); }
+    .btn-danger { background: #ef4444; color: #fff; }
+    .btn-secondary { background: #f3f4f6; color: var(--text); }
+    .btn-sm { padding: 7px 14px; font-size: 13px; border-radius: 10px; width: auto; margin-top: 0; box-shadow: none; }
+    .btn-sm.btn-primary { background: var(--blue-light); color: var(--blue); box-shadow: none; }
+    .btn-sm.btn-danger { background: var(--red-light); color: var(--red); box-shadow: none; }
 
     /* FORM */
-    .form-label { font-size: 13px; color: #8e8e93; margin-bottom: 6px; margin-top: 16px; }
-    input, select { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #d1d1d6; font-size: 16px; background: #fff; color: #1c1c1e; appearance: none; -webkit-appearance: none; outline: none; }
-    input:focus, select:focus { border-color: #007AFF; }
-    select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238e8e93' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
+    .form-label { font-size: 12px; color: var(--text2); font-weight: 600; margin-bottom: 6px; margin-top: 18px; text-transform: uppercase; letter-spacing: 0.4px; }
+    input, select { width: 100%; padding: 13px 14px; border-radius: 12px; border: 1.5px solid #e5e7eb; font-size: 15px; background: #f9fafb; color: var(--text); appearance: none; -webkit-appearance: none; outline: none; font-family: inherit; transition: border-color 0.15s, background 0.15s; }
+    input:focus, select:focus { border-color: var(--blue); background: #fff; box-shadow: 0 0 0 3px rgba(79,124,255,0.12); }
+    select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
 
     /* ITEM SLOT */
-    .item-slot { background: #fff; border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; }
-    .slot-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-    .slot-num { width: 24px; height: 24px; background: #007AFF; color: #fff; border-radius: 50%; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .slot-title { font-size: 15px; font-weight: 500; flex: 1; }
-    .slot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .item-slot { background: var(--card); border-radius: 16px; padding: 16px; margin-bottom: 10px; box-shadow: var(--shadow-sm); }
+    .slot-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .slot-num { width: 28px; height: 28px; background: linear-gradient(135deg, #4f7cff, #6366f1); color: #fff; border-radius: 8px; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .slot-title { font-size: 15px; font-weight: 600; flex: 1; color: var(--text2); }
+    .slot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .slot-grid .full { grid-column: 1 / -1; }
-    .slot-grid label { font-size: 12px; color: #8e8e93; display: block; margin-bottom: 4px; }
-    .slot-grid input, .slot-grid select { padding: 10px 12px; font-size: 15px; }
+    .slot-grid label { font-size: 11px; color: var(--text2); font-weight: 600; display: block; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.4px; }
+    .slot-grid input, .slot-grid select { padding: 11px 13px; font-size: 15px; }
 
     /* STALL STATUS */
-    .status-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 20px; font-size: 13px; font-weight: 500; }
-    .status-open { background: #e8f8ec; color: #28a745; }
-    .status-closed { background: #e8eaf6; color: #5c6bc0; }
-    .status-none { background: #f5f5f5; color: #8e8e93; }
+    .status-badge { display: inline-flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .status-open { background: var(--green-light); color: #16a34a; }
+    .status-closed { background: var(--blue-light); color: #4338ca; }
+    .status-none { background: #f3f4f6; color: var(--text2); }
 
     /* SUMMARY TABLE */
     .sum-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-    .sum-table th { color: #8e8e93; font-weight: 500; padding: 6px 8px; text-align: left; border-bottom: 1px solid #f2f2f7; }
-    .sum-table td { padding: 10px 8px; border-bottom: 1px solid #f2f2f7; vertical-align: middle; }
+    .sum-table th { color: var(--text2); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; padding: 8px 8px; text-align: left; border-bottom: 1px solid var(--border); }
+    .sum-table td { padding: 11px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
     .sum-table tr:last-child td { border-bottom: none; }
     .sum-table .num { text-align: right; font-variant-numeric: tabular-nums; }
 
     /* TOTALS */
-    .total-row { display: flex; justify-content: space-between; align-items: baseline; padding: 10px 0; border-bottom: 1px solid #f2f2f7; }
+    .total-row { display: flex; justify-content: space-between; align-items: center; padding: 11px 0; border-bottom: 1px solid var(--border); }
     .total-row:last-child { border-bottom: none; }
-    .total-label { font-size: 15px; color: #1c1c1e; }
-    .total-value { font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; }
-    .total-value.green { color: #34c759; }
-    .total-value.red { color: #ff3b30; }
-    .total-value.blue { color: #007AFF; }
+    .total-label { font-size: 15px; color: var(--text2); font-weight: 500; }
+    .total-value { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.3px; }
+    .total-value.green { color: var(--green); }
+    .total-value.red { color: var(--red); }
+    .total-value.blue { color: var(--blue); }
 
     /* HISTORY */
-    .hist-item { background: #fff; border-radius: 12px; margin-bottom: 10px; overflow: hidden; }
-    .hist-header { padding: 14px 16px; display: flex; align-items: center; gap: 10px; cursor: pointer; }
-    .hist-date { font-size: 16px; font-weight: 600; flex: 1; }
-    .hist-meta { font-size: 13px; color: #8e8e93; }
-    .hist-revenue { font-size: 16px; font-weight: 600; color: #007AFF; font-variant-numeric: tabular-nums; }
-    .hist-detail { padding: 0 16px 14px; border-top: 1px solid #f2f2f7; display: none; }
+    .hist-item { background: var(--card); border-radius: 16px; margin-bottom: 10px; overflow: hidden; box-shadow: var(--shadow-sm); }
+    .hist-header { padding: 15px 16px; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+    .hist-date { font-size: 16px; font-weight: 700; letter-spacing: -0.3px; flex: 1; }
+    .hist-meta { font-size: 12px; color: var(--text3); margin-top: 2px; }
+    .hist-revenue { font-size: 17px; font-weight: 700; color: var(--blue); font-variant-numeric: tabular-nums; }
+    .hist-detail { padding: 0 16px 14px; border-top: 1px solid var(--border); display: none; }
     .hist-detail.open { display: block; }
-    .hist-chevron { color: #c7c7cc; transition: transform 0.2s; }
+    .hist-chevron { color: var(--text3); transition: transform 0.2s; flex-shrink: 0; }
     .hist-chevron.open { transform: rotate(90deg); }
 
     /* DATE FILTER */
     .filter-row { display: flex; gap: 8px; align-items: center; }
     .filter-row input { flex: 1; }
-    .filter-row span { color: #8e8e93; font-size: 14px; flex-shrink: 0; }
+    .filter-row span { color: var(--text3); font-size: 13px; flex-shrink: 0; }
 
     /* SETTINGS LIST */
-    .settings-item { display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid #f2f2f7; gap: 10px; }
+    .settings-item { display: flex; align-items: center; padding: 14px 16px; border-bottom: 1px solid var(--border); gap: 12px; }
     .settings-item:last-child { border-bottom: none; }
     .settings-item-info { flex: 1; }
-    .settings-item-name { font-size: 16px; }
-    .settings-item-sub { font-size: 13px; color: #8e8e93; margin-top: 2px; }
+    .settings-item-name { font-size: 16px; font-weight: 600; }
+    .settings-item-sub { font-size: 12px; color: var(--text2); margin-top: 3px; }
     .settings-item-actions { display: flex; gap: 8px; }
 
     /* SWEETNESS TAGS */
-    .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-    .tag { background: #e8f0fe; color: #1967d2; padding: 4px 10px; border-radius: 20px; font-size: 13px; display: flex; align-items: center; gap: 4px; }
-    .tag-del { cursor: pointer; color: #8e8e93; font-size: 15px; line-height: 1; }
+    .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+    .tag { background: var(--blue-light); color: var(--blue); padding: 5px 12px; border-radius: 20px; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 5px; }
+    .tag-del { cursor: pointer; color: var(--text3); font-size: 16px; line-height: 1; }
+
+    /* PREVIEW BOX */
+    .preview-box { padding: 11px 13px; background: var(--green-light); border-radius: 12px; font-size: 15px; color: var(--green); font-weight: 600; border: 1.5px solid #bbf7d0; }
 
     /* LOADING / EMPTY */
-    .loading { text-align: center; padding: 40px; color: #8e8e93; font-size: 15px; }
-    .empty-state { text-align: center; padding: 48px 24px; color: #8e8e93; }
-    .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
-    .empty-state p { font-size: 15px; }
+    .loading { text-align: center; padding: 60px 24px; color: var(--text3); font-size: 15px; }
+    .empty-state { text-align: center; padding: 56px 24px; color: var(--text3); }
+    .empty-state .icon { font-size: 44px; margin-bottom: 14px; }
+    .empty-state p { font-size: 15px; font-weight: 500; }
 
     /* TOAST */
-    #toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.75); color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 14px; z-index: 999; opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; }
+    #toast { position: fixed; bottom: 104px; left: 50%; transform: translateX(-50%); background: rgba(17,24,39,0.88); color: #fff; padding: 11px 22px; border-radius: 24px; font-size: 14px; font-weight: 500; z-index: 999; opacity: 0; transition: opacity 0.25s; pointer-events: none; white-space: nowrap; backdrop-filter: blur(8px); }
     #toast.show { opacity: 1; }
+
+    /* DIVIDER */
+    .divider { height: 1px; background: var(--border); margin: 0; }
   </style>
 </head>
 <body>
@@ -248,75 +297,68 @@ function renderHome() {
     const canOpen = state.items.length > 0 && state.locations.length > 0;
     return `
     <div class="header"><h1>出攤管理</h1><div class="header-sub">${today}</div></div>
-    <div class="section">
-      <div class="card">
-        <div class="card-row" style="flex-direction:column;align-items:flex-start;gap:8px;padding:20px 16px">
-          <span class="status-badge status-none">今日尚未開攤</span>
-          ${!canOpen ? '<div style="font-size:14px;color:#8e8e93">請先在設定中新增品項與地點</div>' : ''}
-        </div>
-      </div>
+    <div class="hero-card" style="background:linear-gradient(135deg,#6b7280 0%,#374151 100%);box-shadow:0 8px 24px rgba(107,114,128,0.3)">
+      <div class="hero-label">今日狀態</div>
+      <div class="hero-title">尚未開攤</div>
+      <div class="hero-sub">${canOpen ? '點下方按鈕開始今日出攤' : '請先到設定新增品項與地點'}</div>
+    </div>
+    <div class="section" style="margin-top:14px">
       ${canOpen
-        ? `<button class="btn btn-primary" onclick="go('open-stall')">開始開攤</button>`
+        ? `<button class="btn btn-primary" onclick="go('open-stall')">🛒 開始開攤</button>`
         : `<button class="btn btn-secondary" onclick="go('settings')">前往設定</button>`}
     </div>`;
   }
 
   if (s.status === '開攤中') {
     const totalPrepared = s.items.reduce((a, i) => a + i.prepared, 0);
+    const maxRevenue = s.items.reduce((a, i) => a + i.prepared * i.price, 0);
     return `
     <div class="header"><h1>出攤管理</h1><div class="header-sub">${today}</div></div>
-    <div class="section">
-      <div class="section-label">今日出攤</div>
-      <div class="card">
-        <div class="card-row"><span class="card-row-label">地點</span><span class="card-row-value">${s.location}</span></div>
-        <div class="card-row"><span class="card-row-label">狀態</span><span class="status-badge status-open">開攤中</span></div>
-        <div class="card-row"><span class="card-row-label">總備貨</span><span class="card-row-value">${totalPrepared} 杯</span></div>
-      </div>
+    <div class="hero-card">
+      <div class="hero-label">📍 ${s.location}</div>
+      <div class="hero-title">${totalPrepared} 杯</div>
+      <div class="hero-sub">最高可達 ${fmtMoney(maxRevenue)}</div>
+      <div class="hero-badge"><span class="hero-dot"></span>開攤中</div>
     </div>
-    <div class="section">
-      <div class="section-label">品項明細</div>
-      <div class="card">
-        ${s.items.map(item => `
-          <div class="card-row">
-            <div style="flex:1">
-              <div style="font-size:16px">${item.name}</div>
-              ${item.sweetness ? `<div style="font-size:13px;color:#8e8e93">${item.sweetness}</div>` : ''}
-            </div>
-            <div style="text-align:right">
-              <div style="font-size:16px;font-weight:500">${item.prepared} 杯</div>
-              <div style="font-size:13px;color:#8e8e93">${fmtMoney(item.price)}/杯</div>
-            </div>
-          </div>`).join('')}
-      </div>
+    <div class="stat-grid">
+      ${s.items.map(item => `
+        <div class="stat-card">
+          <div class="stat-card-label">${item.name}</div>
+          <div class="stat-card-value blue">${item.prepared}</div>
+          <div class="stat-card-sub">${item.sweetness || fmtMoney(item.price) + '/杯'}</div>
+        </div>`).join('')}
     </div>
     <div class="section">
       <button class="btn btn-success" onclick="go('close-stall')">收攤結算</button>
-      <button class="btn btn-secondary" onclick="go('open-stall')">修改開攤資料</button>
+      <button class="btn btn-secondary" onclick="go('open-stall')" style="margin-top:8px">修改開攤資料</button>
     </div>`;
   }
 
   // 已收攤
   const { revenue, wasteCost, totalPrepared, totalWaste } = calcStall(s.items);
+  const totalCost = s.items.reduce((a, item) => a + item.prepared * item.cost, 0);
+  const profit = revenue - totalCost;
   return `
   <div class="header"><h1>出攤管理</h1><div class="header-sub">${today}</div></div>
-  <div class="section">
-    <div class="section-label">今日結算</div>
-    <div class="card">
-      <div class="card-row"><span class="card-row-label">地點</span><span class="card-row-value">${s.location}</span></div>
-      <div class="card-row"><span class="card-row-label">狀態</span><span class="status-badge status-closed">已收攤</span></div>
+  <div class="hero-card" style="background:linear-gradient(135deg,#6366f1 0%,#4338ca 100%);box-shadow:0 8px 24px rgba(99,102,241,0.35)">
+    <div class="hero-label">📍 ${s.location} · 已收攤</div>
+    <div class="hero-title">${fmtMoney(revenue)}</div>
+    <div class="hero-sub">售出 ${totalPrepared - totalWaste} 杯 · 報廢 ${totalWaste} 杯</div>
+  </div>
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="stat-card-label">報廢成本</div>
+      <div class="stat-card-value red">${fmtMoney(wasteCost)}</div>
+      <div class="stat-card-sub">${totalWaste} 杯</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-label">毛利</div>
+      <div class="stat-card-value ${profit >= 0 ? 'green' : 'red'}">${fmtMoney(profit)}</div>
+      <div class="stat-card-sub">扣除全成本</div>
     </div>
   </div>
   <div class="section">
-    <div class="section-label">今日數字</div>
-    <div class="card" style="padding:14px 16px">
-      <div class="total-row"><span class="total-label">營業額</span><span class="total-value blue">${fmtMoney(revenue)}</span></div>
-      <div class="total-row"><span class="total-label">報廢成本</span><span class="total-value red">${fmtMoney(wasteCost)}</span></div>
-      <div class="total-row"><span class="total-label">總備貨</span><span class="total-value">${totalPrepared} 杯</span></div>
-      <div class="total-row"><span class="total-label">報廢杯數</span><span class="total-value">${totalWaste} 杯</span></div>
-    </div>
-  </div>
-  <div class="section">
-    <button class="btn btn-primary" onclick="go('summary')">查看明細</button>
+    <button class="btn btn-primary" onclick="go('summary')">查看完整明細</button>
   </div>`;
 }
 
@@ -487,7 +529,7 @@ function renderCloseStall() {
         </div>
         <div>
           <label>售出預覽</label>
-          <div id="preview_${i}" style="padding:10px 12px;background:#f2f2f7;border-radius:10px;font-size:15px;color:#34c759;font-weight:500">
+          <div id="preview_${i}" class="preview-box">
             ${item.prepared} 杯 · ${fmtMoney(item.prepared * item.price)}
           </div>
         </div>
@@ -515,7 +557,11 @@ function renderCloseStall() {
 function updateSoldPreview(idx, prepared, price) {
   const waste = parseInt(document.getElementById(`waste_${idx}`).value) || 0;
   const sold = Math.max(0, prepared - waste);
-  document.getElementById(`preview_${idx}`).textContent = `${sold} 杯 · ${fmtMoney(sold * price)}`;
+  const el = document.getElementById(`preview_${idx}`);
+  el.textContent = `${sold} 杯 · ${fmtMoney(sold * price)}`;
+  el.style.background = sold > 0 ? '' : '#fef2f2';
+  el.style.color = sold > 0 ? '' : '#ef4444';
+  el.style.borderColor = sold > 0 ? '' : '#fecaca';
 }
 
 async function submitCloseStall(btn) {
