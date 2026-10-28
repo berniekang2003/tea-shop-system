@@ -1,1527 +1,927 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>分店叫茶</title>
-<style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { height: 100%; }
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'PingFang TC', 'Noto Sans TC', sans-serif;
-  background: #f2f2f7;
-  color: #1c1c1e;
-  max-width: 480px;
-  margin: 0 auto;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-#app { display: flex; flex-direction: column; min-height: 100vh; }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>出攤管理</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif; background: #f2f2f7; color: #1c1c1e; min-height: 100vh; padding-bottom: 80px; }
 
-.topbar {
-  background: #fff;
-  border-bottom: 0.5px solid #c6c6c8;
-  padding: 12px 16px;
-  position: sticky;
-  top: 0;
-  z-index: 10;
-}
-.topbar-inner { display: flex; align-items: center; justify-content: space-between; }
-.topbar-title { font-size: 17px; font-weight: 600; }
-.topbar-sub { font-size: 13px; color: #8e8e93; margin-top: 2px; }
-.back-btn { background: none; border: none; font-size: 15px; color: #007aff; padding: 0; cursor: pointer; }
+    /* NAV */
+    .nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(249,249,249,0.94); border-top: 1px solid #d1d1d6; backdrop-filter: saturate(180%) blur(20px); display: flex; z-index: 100; padding-bottom: env(safe-area-inset-bottom); }
+    .nav-tab { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 8px 0 6px; gap: 3px; font-size: 10px; color: #8e8e93; cursor: pointer; }
+    .nav-tab.active { color: #007AFF; }
+    .nav-tab svg { width: 24px; height: 24px; }
 
-.content { flex: 1; padding: 16px; padding-bottom: 120px; }
+    /* HEADER */
+    .header { background: rgba(249,249,249,0.94); backdrop-filter: saturate(180%) blur(20px); border-bottom: 1px solid #d1d1d6; padding: 12px 16px 10px; position: sticky; top: 0; z-index: 50; }
+    .header h1 { font-size: 17px; font-weight: 600; text-align: center; }
+    .header-sub { font-size: 12px; color: #8e8e93; text-align: center; margin-top: 2px; }
+    .header-row { display: flex; align-items: center; justify-content: space-between; }
+    .back-btn { font-size: 17px; color: #007AFF; cursor: pointer; padding: 2px 0; display: flex; align-items: center; gap: 4px; }
 
-.section-title {
-  font-size: 12px; font-weight: 600; color: #8e8e93;
-  text-transform: uppercase; letter-spacing: 0.04em;
-  margin: 20px 0 8px;
-}
-.section-title:first-child { margin-top: 0; }
+    /* CARDS */
+    .section { margin: 16px 16px 0; }
+    .section-label { font-size: 13px; color: #8e8e93; font-weight: 500; padding: 0 4px 6px; text-transform: uppercase; letter-spacing: 0.3px; }
+    .card { background: #fff; border-radius: 12px; overflow: hidden; }
+    .card-row { padding: 12px 16px; border-bottom: 1px solid #f2f2f7; display: flex; align-items: center; gap: 12px; }
+    .card-row:last-child { border-bottom: none; }
+    .card-row-label { font-size: 17px; flex: 1; }
+    .card-row-value { font-size: 17px; color: #8e8e93; }
 
-.card { background: #fff; border-radius: 12px; padding: 0 16px; margin-bottom: 12px; overflow: hidden; }
+    /* BUTTONS */
+    .btn { width: 100%; padding: 14px; border-radius: 12px; border: none; font-size: 17px; font-weight: 600; cursor: pointer; margin-top: 12px; transition: opacity 0.1s; }
+    .btn:active { opacity: 0.7; }
+    .btn-primary { background: #007AFF; color: #fff; }
+    .btn-success { background: #34c759; color: #fff; }
+    .btn-danger { background: #ff3b30; color: #fff; }
+    .btn-secondary { background: #e5e5ea; color: #1c1c1e; }
+    .btn-sm { padding: 8px 16px; font-size: 14px; border-radius: 8px; width: auto; margin-top: 0; }
 
-.row { display: flex; align-items: center; padding: 12px 0; border-bottom: 0.5px solid #f2f2f7; gap: 10px; }
-.row:last-child { border-bottom: none; }
-.row-name { flex: 1; font-size: 15px; }
+    /* FORM */
+    .form-label { font-size: 13px; color: #8e8e93; margin-bottom: 6px; margin-top: 16px; }
+    input, select { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #d1d1d6; font-size: 16px; background: #fff; color: #1c1c1e; appearance: none; -webkit-appearance: none; outline: none; }
+    input:focus, select:focus { border-color: #007AFF; }
+    select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238e8e93' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
 
-.level-wrap { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
-.level-track { flex: 1; height: 8px; background: #f2f2f7; border-radius: 4px; overflow: hidden; }
-.level-fill { height: 100%; border-radius: 4px; }
-.level-fill.high { background: #34c759; }
-.level-fill.mid  { background: #ff9500; }
-.level-fill.low  { background: #ff3b30; }
-.level-text { font-size: 13px; font-weight: 600; min-width: 40px; text-align: right; }
-.level-text.high { color: #34c759; }
-.level-text.mid  { color: #ff9500; }
-.level-text.low  { color: #ff3b30; }
-.level-max { font-size: 12px; color: #8e8e93; }
+    /* ITEM SLOT */
+    .item-slot { background: #fff; border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; }
+    .slot-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .slot-num { width: 24px; height: 24px; background: #007AFF; color: #fff; border-radius: 50%; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .slot-title { font-size: 15px; font-weight: 500; flex: 1; }
+    .slot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .slot-grid .full { grid-column: 1 / -1; }
+    .slot-grid label { font-size: 12px; color: #8e8e93; display: block; margin-bottom: 4px; }
+    .slot-grid input, .slot-grid select { padding: 10px 12px; font-size: 15px; }
 
-.open-ok   { font-size: 12px; color: #8e8e93; }
-.open-warn { font-size: 12px; color: #ff9500; font-weight: 500; }
-.open-today{ font-size: 12px; color: #34c759; font-weight: 500; }
+    /* STALL STATUS */
+    .status-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 20px; font-size: 13px; font-weight: 500; }
+    .status-open { background: #e8f8ec; color: #28a745; }
+    .status-closed { background: #e8eaf6; color: #5c6bc0; }
+    .status-none { background: #f5f5f5; color: #8e8e93; }
 
-.rot-strip { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
-.rot-chip { font-size: 12px; padding: 4px 10px; border-radius: 20px; font-weight: 500; }
-.rot-chip.active  { background: #5856d6; color: #fff; }
-.rot-chip.next    { background: #ede9ff; color: #5856d6; border: 1px solid #c4b5fd; }
-.rot-chip.standby { background: #f2f2f7; color: #8e8e93; }
+    /* SUMMARY TABLE */
+    .sum-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .sum-table th { color: #8e8e93; font-weight: 500; padding: 6px 8px; text-align: left; border-bottom: 1px solid #f2f2f7; }
+    .sum-table td { padding: 10px 8px; border-bottom: 1px solid #f2f2f7; vertical-align: middle; }
+    .sum-table tr:last-child td { border-bottom: none; }
+    .sum-table .num { text-align: right; font-variant-numeric: tabular-nums; }
 
-.rot-hint { font-size: 13px; color: #5856d6; background: #ede9ff; border-radius: 10px; padding: 8px 12px; margin-bottom: 10px; }
+    /* TOTALS */
+    .total-row { display: flex; justify-content: space-between; align-items: baseline; padding: 10px 0; border-bottom: 1px solid #f2f2f7; }
+    .total-row:last-child { border-bottom: none; }
+    .total-label { font-size: 15px; color: #1c1c1e; }
+    .total-value { font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .total-value.green { color: #34c759; }
+    .total-value.red { color: #ff3b30; }
+    .total-value.blue { color: #007AFF; }
 
-.action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
-.action-btn {
-  background: #fff; border: 0.5px solid #c6c6c8; border-radius: 12px;
-  padding: 14px 12px; cursor: pointer; text-align: center;
-}
-.action-btn:active { background: #f2f2f7; }
-.action-btn .icon  { font-size: 24px; margin-bottom: 4px; }
-.action-btn .label { font-size: 14px; font-weight: 500; }
-.action-btn .sublabel { font-size: 11px; color: #8e8e93; margin-top: 2px; }
-.action-btn.done { border-color: #34c759; }
-.action-btn.done .label { color: #34c759; }
+    /* HISTORY */
+    .hist-item { background: #fff; border-radius: 12px; margin-bottom: 10px; overflow: hidden; }
+    .hist-header { padding: 14px 16px; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+    .hist-date { font-size: 16px; font-weight: 600; flex: 1; }
+    .hist-meta { font-size: 13px; color: #8e8e93; }
+    .hist-revenue { font-size: 16px; font-weight: 600; color: #007AFF; font-variant-numeric: tabular-nums; }
+    .hist-detail { padding: 0 16px 14px; border-top: 1px solid #f2f2f7; display: none; }
+    .hist-detail.open { display: block; }
+    .hist-chevron { color: #c7c7cc; transition: transform 0.2s; }
+    .hist-chevron.open { transform: rotate(90deg); }
 
-.status-bar {
-  position: fixed; bottom: 60px; left: 50%; transform: translateX(-50%);
-  width: 100%; max-width: 480px;
-  background: #fff; border-top: 0.5px solid #c6c6c8; border-bottom: 0.5px solid #c6c6c8;
-  padding: 8px 0; z-index: 9;
-  display: grid; grid-template-columns: 1fr 1px 1fr 1px 1fr;
-}
-.status-divider { background: #c6c6c8; }
-.status-item { padding: 0 6px; text-align: center; }
-.status-item-label { font-size: 10px; color: #8e8e93; margin-bottom: 2px; }
-.status-item-val { font-size: 11px; font-weight: 500; }
-.status-item-val.done    { color: #34c759; }
-.status-item-val.pending { color: #8e8e93; }
-.status-item-val.waiting { color: #ff9500; }
+    /* DATE FILTER */
+    .filter-row { display: flex; gap: 8px; align-items: center; }
+    .filter-row input { flex: 1; }
+    .filter-row span { color: #8e8e93; font-size: 14px; flex-shrink: 0; }
 
-.navbar {
-  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
-  width: 100%; max-width: 480px; background: #fff;
-  border-top: 0.5px solid #c6c6c8;
-  display: grid; grid-template-columns: repeat(4, 1fr); z-index: 10;
-}
-.nav-btn {
-  background: none; border: none; padding: 8px 4px 16px; cursor: pointer;
-  display: flex; flex-direction: column; align-items: center; gap: 3px;
-  color: #8e8e93; font-size: 10px;
-}
-.nav-btn.active { color: #007aff; }
-.nav-btn .nav-icon { font-size: 22px; line-height: 1; }
+    /* SETTINGS LIST */
+    .settings-item { display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid #f2f2f7; gap: 10px; }
+    .settings-item:last-child { border-bottom: none; }
+    .settings-item-info { flex: 1; }
+    .settings-item-name { font-size: 16px; }
+    .settings-item-sub { font-size: 13px; color: #8e8e93; margin-top: 2px; }
+    .settings-item-actions { display: flex; gap: 8px; }
 
-.field-row {
-  display: flex; align-items: center; padding: 10px 0;
-  border-bottom: 0.5px solid #f2f2f7; gap: 8px;
-}
-.field-row:last-child { border-bottom: none; }
-.field-name { flex: 1; font-size: 15px; }
-.field-tag {
-  font-size: 11px; background: #ede9ff; color: #5856d6;
-  padding: 2px 6px; border-radius: 6px; margin-left: 4px;
-}
-.field-input {
-  width: 60px; text-align: center; font-size: 16px;
-  border: 1px solid #c6c6c8; border-radius: 8px; padding: 6px;
-  background: #f2f2f7; color: #1c1c1e;
-}
-.field-input:focus { outline: none; border-color: #007aff; background: #fff; }
-.field-input.suggested { border-color: #5856d6; background: #ede9ff; color: #5856d6; }
-.field-unit { font-size: 13px; color: #8e8e93; width: 20px; }
+    /* SWEETNESS TAGS */
+    .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .tag { background: #e8f0fe; color: #1967d2; padding: 4px 10px; border-radius: 20px; font-size: 13px; display: flex; align-items: center; gap: 4px; }
+    .tag-del { cursor: pointer; color: #8e8e93; font-size: 15px; line-height: 1; }
 
-.date-input {
-  border: 1px solid #c6c6c8; border-radius: 8px; padding: 5px 8px;
-  font-size: 13px; background: #f2f2f7; color: #1c1c1e; width: 140px;
-}
+    /* LOADING / EMPTY */
+    .loading { text-align: center; padding: 40px; color: #8e8e93; font-size: 15px; }
+    .empty-state { text-align: center; padding: 48px 24px; color: #8e8e93; }
+    .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+    .empty-state p { font-size: 15px; }
 
-.check-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.check-item {
-  display: flex; align-items: center; gap: 10px; background: #fff;
-  border: 1px solid #c6c6c8; border-radius: 10px; padding: 10px 12px; cursor: pointer;
-}
-.check-item.checked { border-color: #007aff; background: #e8f3ff; }
-.check-box {
-  width: 22px; height: 22px; border-radius: 6px; border: 1.5px solid #c6c6c8;
-  display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 14px;
-}
-.check-item.checked .check-box { background: #007aff; border-color: #007aff; color: #fff; }
-.check-label { font-size: 14px; }
-.check-item.checked .check-label { color: #007aff; font-weight: 500; }
-
-.waste-type-btn {
-  flex:1; padding:10px; border-radius:10px; border:1.5px solid #e5e5ea;
-  background:#fff; color:#8e8e93; font-size:15px; font-weight:500; cursor:pointer;
-}
-.waste-type-btn.active { border-color:#007aff; color:#007aff; background:#f0f5ff; }
-.btn-secondary {
-  display: block; width: calc(100% - 32px); margin: 0 16px; padding: 16px;
-  border-radius: 14px; border: 1.5px solid #007aff; background: #fff;
-  color: #007aff; font-size: 17px; font-weight: 600; cursor: pointer;
-}
-.btn-secondary:active { background: #f0f5ff; }
-.btn-primary {
-  width: 100%; padding: 15px; background: #007aff; color: #fff;
-  border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 16px;
-}
-.btn-primary:active { background: #0062cc; }
-.btn-primary:disabled { background: #c6c6c8; cursor: not-allowed; }
-
-.mon-input {
-  width: 58px; text-align: center; font-size: 15px; font-weight: 500;
-  border: 1px solid #007aff; border-radius: 8px; padding: 5px;
-  background: #e8f3ff; color: #007aff;
-}
-.mon-input.adjusted { border-color: #ff9500; background: #fff8ec; color: #ff9500; }
-.mon-req-val { font-size: 14px; color: #8e8e93; min-width: 36px; text-align: right; }
-.mon-arrow { color: #c6c6c8; }
-
-.arr-item {
-  display: flex; align-items: center; padding: 12px 0;
-  border-bottom: 0.5px solid #f2f2f7; gap: 10px;
-}
-.arr-item:last-child { border-bottom: none; }
-.arr-check {
-  width: 28px; height: 28px; border-radius: 8px; border: 2px solid #c6c6c8;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; flex-shrink: 0; font-size: 16px;
-}
-.arr-check.checked { background: #34c759; border-color: #34c759; color: #fff; }
-
-.supply-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px; }
-.supply-tag { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: 8px; font-size: 13px; }
-.supply-tag.yes { background: #e8fff0; color: #34c759; border: 1px solid #a8f0c0; }
-.supply-tag.no  { background: #f2f2f7; color: #8e8e93; }
-
-.hist-row { display: flex; align-items: center; padding: 12px 0; border-bottom: 0.5px solid #f2f2f7; gap: 10px; }
-.hist-row:last-child { border-bottom: none; }
-.hist-date { font-size: 15px; font-weight: 500; }
-.hist-meta { font-size: 12px; color: #8e8e93; margin-top: 2px; }
-
-.badge { font-size: 11px; padding: 3px 8px; border-radius: 20px; font-weight: 500; }
-.badge.done    { background: #e8fff0; color: #34c759; }
-.badge.shipped { background: #fff8ec; color: #ff9500; }
-.badge.pending { background: #ede9ff; color: #5856d6; }
-
-.loading { text-align: center; padding: 40px 16px; color: #8e8e93; font-size: 15px; }
-
-.toast {
-  position: fixed; top: 70px; left: 50%; transform: translateX(-50%);
-  background: rgba(0,0,0,0.8); color: #fff; padding: 10px 20px;
-  border-radius: 20px; font-size: 14px; z-index: 100;
-  opacity: 0; transition: opacity 0.3s; white-space: nowrap; pointer-events: none;
-}
-.toast.show { opacity: 1; }
-
-.soldout-btn {
-  font-size: 11px; color: #ff3b30; background: #fff2f0;
-  border: 1px solid #ffccc7; border-radius: 6px; padding: 3px 8px;
-  cursor: pointer; margin-left: 6px; white-space: nowrap;
-}
-</style>
+    /* TOAST */
+    #toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.75); color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 14px; z-index: 999; opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; }
+    #toast.show { opacity: 1; }
+  </style>
 </head>
 <body>
-<div id="app"></div>
-<div class="toast" id="toast"></div>
+<div id="app"><div class="loading">載入中…</div></div>
+<div id="toast"></div>
 
 <script>
 const API = 'https://script.google.com/macros/s/AKfycbyKrS_BEKBj7Y2ZGq6iz4996VXMAApjxsNwaHFysmmjzsDjWi_L8p7O4LwM-8yJP_w-FQ/exec';
 
-const SUPPLY_UNITS = {
-  杯子:'條', 瓶子:'支', 感熱紙:'卷', 標籤貼:'卷', 試飲杯:'條',
-  細吸管:'包', 粗吸管:'包', '1號袋':'包', '2號袋':'包', '4號袋':'包', 封膜卷:'卷'
-};
-const INGREDIENTS = ['牛奶','柳橙','梅子汁','梅子凍','冰塊','梅子顆粒'];
-const SUPPLIES = ['杯子','瓶子','感熱紙','標籤貼','試飲杯','細吸管','粗吸管','1號袋','2號袋','4號袋','封膜卷'];
-
 const state = {
   screen: 'home',
-  prevScreen: 'home',
-  items: { fixed: [], rotating: [], rotatingAll: [], nextItem: null },
-  inventory: [],
-  order: null,
+  items: [],
+  locations: [],
+  stall: null,
   loaded: false,
-  historyCache: null,
-  wasteCache: null,
+  historyData: null,
+  histFilter: { start: '', end: '' },
+  editItemOriginal: null
 };
 
+/* ---- Utility ---- */
 function todayStr() {
   const d = new Date();
-  return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+  return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
 }
 
-async function apiGet(action, params = {}) {
-  try {
-    const qs = new URLSearchParams({ action, ...params }).toString();
-    const res = await fetch(`${API}?${qs}`);
-    return res.json();
-  } catch (e) {
-    return { error: '網路錯誤' };
-  }
+function fmtDate(d8) {
+  if (!d8 || d8.length < 8) return d8 || '';
+  return `${d8.slice(0,4)}/${d8.slice(4,6)}/${d8.slice(6,8)}`;
 }
 
-async function apiPost(body) {
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 30000);
-    const res = await fetch(API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify(body),
-      signal: controller.signal,
-    });
-    clearTimeout(timer);
-    return res.json();
-  } catch (e) {
-    return { error: e.name === 'AbortError' ? '請求逾時，請重試' : '網路錯誤' };
-  }
+function fmtMoney(n) {
+  return '$' + Number(n).toLocaleString();
 }
 
-function showToast(msg, duration = 2500) {
+function toast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), duration);
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(() => t.classList.remove('show'), 2000);
 }
 
-function go(screen) {
-  state.prevScreen = state.screen;
-  state.screen = screen;
+/* ---- API ---- */
+async function apiGet(action, params = {}) {
+  const qs = Object.entries({ action, ...params }).map(([k,v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&');
+  const res = await fetch(`${API}?${qs}`);
+  return res.json();
+}
+
+async function apiPost(data) {
+  const res = await fetch(API, { method: 'POST', body: JSON.stringify(data) });
+  return res.json();
+}
+
+/* ---- Load ---- */
+async function loadAll() {
+  try {
+    const [itemsRes, locsRes, stallRes] = await Promise.all([
+      apiGet('getItems'),
+      apiGet('getLocations'),
+      apiGet('getStallData', { date: todayStr() })
+    ]);
+    state.items = itemsRes.items || [];
+    state.locations = locsRes.locations || [];
+    state.stall = stallRes;
+    state.loaded = true;
+  } catch(e) {
+    state.loaded = true;
+    toast('載入失敗，請重試');
+  }
   render();
 }
 
-function back() { go(state.prevScreen || 'home'); }
-
-const CACHE_KEY       = 'teasys_cache';
-const ITEMS_CACHE_KEY = 'teasys_items';
-const ITEMS_TTL_MS    = 7 * 24 * 60 * 60 * 1000; // 7 天
-
-function saveCache(daily) {
+async function refreshStall() {
   try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify({ date: todayStr(), data: daily }));
+    const res = await apiGet('getStallData', { date: todayStr() });
+    state.stall = res;
   } catch(e) {}
 }
 
-function loadCache() {
-  try {
-    const raw = localStorage.getItem(CACHE_KEY);
-    if (!raw) return null;
-    const { date, data } = JSON.parse(raw);
-    return date === todayStr() ? data : null;
-  } catch(e) { return null; }
+/* ---- Navigation ---- */
+function go(screen) {
+  state.screen = screen;
+  window.scrollTo(0, 0);
+  render();
 }
 
-function saveItemsCache(items) {
-  try {
-    localStorage.setItem(ITEMS_CACHE_KEY, JSON.stringify({ ts: Date.now(), items }));
-  } catch(e) {}
+function render() {
+  const app = document.getElementById('app');
+  if (!state.loaded) { app.innerHTML = '<div class="loading">載入中…</div>'; return; }
+
+  let html = '';
+  if      (state.screen === 'home')         html = renderHome();
+  else if (state.screen === 'open-stall')   html = renderOpenStall();
+  else if (state.screen === 'close-stall')  html = renderCloseStall();
+  else if (state.screen === 'summary')      html = renderSummary();
+  else if (state.screen === 'history')      html = renderHistory();
+  else if (state.screen === 'settings')     html = renderSettings();
+  else if (state.screen === 'edit-item')    html = renderEditItem();
+  else if (state.screen === 'add-location') html = renderAddLocation();
+
+  html += renderNavbar();
+  app.innerHTML = html;
+  attachHandlers();
 }
 
-function loadItemsCache() {
-  try {
-    const raw = localStorage.getItem(ITEMS_CACHE_KEY);
-    if (!raw) return null;
-    const { ts, items } = JSON.parse(raw);
-    return Date.now() - ts < ITEMS_TTL_MS ? items : null;
-  } catch(e) { return null; }
-}
-
-function applyDaily(daily) {
-  state.inventory = daily.inv.items || [];
-  state.openingInventory = daily.inv.openingItems || [];
-  state.invTodayUpdated = daily.inv.todayUpdated || false;
-  state.invUpdateTime = daily.inv.updateTime || '';
-  state.order = daily.order.found ? daily.order : null;
-}
-
-async function loadAll() {
-  const cachedItems = loadItemsCache();
-  const cachedDaily = loadCache();
-
-  // 有 cache → 立刻顯示
-  if (cachedItems && cachedDaily) {
-    state.items = cachedItems;
-    applyDaily(cachedDaily);
-    state.loaded = true;
-    try { render(); } catch(e) {}
-  }
-
-  try {
-    let items = cachedItems;
-    if (!items) {
-      // items 過期或沒有 → 抓完整 getAll
-      const data = await apiGet('getAll', { date: todayStr() });
-      if (data.error) throw new Error(data.error);
-      items = data.items;
-      saveItemsCache(items);
-      applyDaily(data);
-      saveCache(data);
-    } else {
-      // items 有效 → 只抓 getDailyData
-      const daily = await apiGet('getDailyData', { date: todayStr() });
-      if (daily.error) throw new Error(daily.error);
-      applyDaily(daily);
-      saveCache(daily);
-    }
-    state.items = items;
-    state.loaded = true;
-    try { render(); } catch(re) {
-      if (!cachedItems) document.getElementById('app').innerHTML = `<div class="loading">畫面錯誤：${re.message}<br><br>請截圖</div>`;
-    }
-  } catch(e) {
-    if (!cachedItems || !cachedDaily) {
-      document.getElementById('app').innerHTML = `<div class="loading">API錯誤：${e.message}<br><br>請截圖</div>`;
-    } else {
-      showToast('⚠️ 網路異常，顯示上次資料');
-    }
-  }
-}
-
-function getInvItem(name) { return state.inventory.find(i => i.name.trim() === name.trim()); }
-
-function invStatus(name) {
-  const inv = getInvItem(name);
-  if (!inv) return 'new';
-  // 今天開局數量為 0 或無開局記錄 → 未上架，不視為售完
-  const openingInv = (state.openingInventory || []).find(i => i.name.trim() === name.trim());
-  if ((!openingInv || Number(openingInv.qty) === 0) && Number(inv.qty) === 0) return 'new';
-  return Number(inv.qty) > 0 ? 'active' : 'soldout';
-}
-
-function nextRotationItem() {
-  const nonPaused = state.items.rotatingAll.filter(r => !r.paused);
-  return nonPaused.find(r => invStatus(r.name) === 'new')
-      || nonPaused.find(r => invStatus(r.name) === 'soldout')
-      || null;
-}
-
-function calcDaysOpen(openDate) {
-  if (!openDate) return null;
-  const parts = openDate.split('/');
-  if (parts.length < 3) return null;
-  const open = new Date(parts[0], parts[1]-1, parts[2]);
-  const today = new Date(); today.setHours(0,0,0,0);
-  return Math.floor((today - open) / 86400000);
-}
-
-function levelClass(pct) {
-  if (pct > 0.5) return 'high';
-  if (pct > 0.25) return 'mid';
-  return 'low';
-}
-
-function openDateLabel(openDate) {
-  const days = calcDaysOpen(openDate);
-  if (days === null || days > 6) return '';
-  if (days < 0) return '<span class="open-ok">未來日期</span>';
-  const label = days + 1;
-  if (days >= 3) return `<span class="open-warn">開桶第 ${label} 天</span>`;
-  return `<span class="open-ok">開桶第 ${label} 天</span>`;
-}
-
-function renderNavbar(active) {
-  const items = [
-    { id:'home', label:'今日', icon:'🏠' },
-    { id:'ordersheet', label:'叫貨單', icon:'📋' },
-    { id:'history', label:'歷史', icon:'🕐' },
-    { id:'waste',   label:'報廢', icon:'🗑️' },
-    { id:'stats',   label:'統計', icon:'📊' },
+function renderNavbar() {
+  const tabs = [
+    { id: 'home', label: '首頁', icon: '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>' },
+    { id: 'history', label: '歷史', icon: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>' },
+    { id: 'settings', label: '設定', icon: '<circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>' }
   ];
-  return `<div class="navbar">${items.map(i =>
-    `<button class="nav-btn ${active===i.id?'active':''}" onclick="go('${i.id}')">
-      <span class="nav-icon">${i.icon}</span>${i.label}
-    </button>`).join('')}</div>`;
+  const active = ['home','open-stall','close-stall','summary'].includes(state.screen) ? 'home'
+               : state.screen === 'history' ? 'history' : 'settings';
+  return `<nav class="nav">${tabs.map(t => `
+    <div class="nav-tab ${active===t.id?'active':''}" onclick="go('${t.id}')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${t.icon}</svg>
+      <span>${t.label}</span>
+    </div>`).join('')}</nav>`;
 }
 
-// ── 主畫面 ────────────────────────────────────
+/* ============================================================
+   HOME
+   ============================================================ */
 function renderHome() {
-  const today = todayStr();
-  const { fixed, rotatingAll } = state.items;
-  const order = state.order;
+  const s = state.stall;
+  const today = fmtDate(todayStr());
 
-  const invDone = state.invTodayUpdated;
-  const invTime = invDone ? (state.invUpdateTime || '').split(' ')[1] || '' : '';
-  const orderDone = !!order;
-  const shippingDone = order && (order.status === '已出貨' || order.status === '已完結');
-  const arrivalDone = order && order.status === '已完結';
-
-
-  function teaCard(item) {
-    const inv = getInvItem(item.name);
-    const invTag = inv ? (inv.tag || '') : '';
-    const isWasted = invTag === '報廢';
-    const rawQty = inv ? Number(inv.qty) : null;
-    const qty = isWasted ? 0 : rawQty;  // 報廢品顯示 0，但資料庫保留實際數字
-    const openDate = inv ? inv.openDate : '';
-    const soldOutTime = inv ? (inv.soldOutTime || '') : '';
-    const openingInv = (state.openingInventory || []).find(i => i.name.trim() === item.name.trim());
-    const openingQty = openingInv ? Number(openingInv.qty) : null;
-    const pct = qty !== null && qty > 0 ? qty / item.cups : 0;
-    const cls = qty !== null && qty > 0 ? levelClass(pct) : 'low';
-    const fillPct = Math.round(pct * 100);
-    const st = invStatus(item.name);
-    const statusTag = isWasted
-      ? '<span style="font-size:11px;background:#8e8e93;color:#fff;border-radius:4px;padding:1px 6px;margin-left:4px">報廢</span>'
-      : st === 'soldout'
-      ? '<span style="font-size:11px;background:#ff3b30;color:#fff;border-radius:4px;padding:1px 6px;margin-left:4px">售完</span>'
-      : st === 'new'
-      ? '<span style="font-size:11px;background:#8e8e93;color:#fff;border-radius:4px;padding:1px 6px;margin-left:4px">未上架</span>'
-      : '';
-    const timeDisplay = !isWasted && soldOutTime ? soldOutTime.slice(0,5) : '';
-    const soldOutTag = timeDisplay
-      ? `<span style="font-size:11px;background:#ff3b30;color:#fff;border-radius:4px;padding:1px 6px;margin-left:4px">[${timeDisplay}]</span>` : '';
-
-    return `<div class="row" style="flex-direction:column;align-items:flex-start">
-      <div style="width:100%;display:flex;align-items:center;justify-content:space-between">
-        <span style="font-size:15px;font-weight:500">${item.name}${statusTag}${soldOutTag}</span>
-        ${openDate ? openDateLabel(openDate) : '<span class="open-ok">未填</span>'}
-      </div>
-      <div class="level-wrap" style="width:100%">
-        <div class="level-track"><div class="level-fill ${cls}" style="width:${fillPct}%"></div></div>
-        <span class="level-text ${cls}">${qty !== null ? qty : '—'}</span>
-        <span class="level-max">／${item.cups}</span>
-        ${openingQty !== null ? `<span style="font-size:11px;color:#8e8e93;margin-left:4px">開局 ${openingQty}</span>` : ''}
-      </div>
-    </div>`;
-  }
-
-  return `
-    <div class="topbar">
-      <div class="topbar-inner">
-        <div>
-          <div class="topbar-title">分店叫茶</div>
-          <div class="topbar-sub">${today}</div>
-        </div>
-        <button onclick="go('settings')" style="background:none;border:none;font-size:22px;cursor:pointer;color:#8e8e93">⚙️</button>
-      </div>
-    </div>
-    <div class="content">
-      <div class="action-grid">
-        <button class="action-btn ${invDone?'done':''}" onclick="go('inventory')">
-          <div class="icon">📋</div>
-          <div class="label">庫存登記</div>
-          <div class="sublabel">${invDone ? '✓ '+invTime+' 完成' : '尚未填寫'}</div>
-        </button>
-        <button class="action-btn ${orderDone?'done':''}" onclick="go('order')">
-          <div class="icon">📦</div>
-          <div class="label">叫貨申請</div>
-          <div class="sublabel">${!orderDone ? '尚未申請' : order.status==='已申請' ? '✓ '+((order.requestTime||'').split(' ')[1]||'')+' 申請中（可更新）' : '✓ '+((order.requestTime||'').split(' ')[1]||'')+' 送出'}${order && order.totalCount > 1 ? '・共'+order.totalCount+'張' : ''}</div>
-        </button>
-      </div>
-
-      <div class="section-title">傳統原味</div>
-      ${(() => {
-        const alertItems = rotatingAll.filter(item => {
-          const inv = getInvItem(item.name);
-          const openDate = inv ? (inv.openDate || '') : '';
-          if (!openDate) return true;
-          const days = calcDaysOpen(openDate);
-          if (days === null) return true;
-          return days > 6;
-        });
-        if (alertItems.length === 0) return '';
-        const cols = 3;
-        const cells = alertItems.map((item, idx) => {
-          const inv = getInvItem(item.name);
-          const openDate = inv ? (inv.openDate || '') : '';
-          const label = !openDate ? '未填' : openDate.slice(5).replace('/','/');
-          const col = idx % cols;
-          const isLastCol = col === cols - 1;
-          const isVeryLast = idx === alertItems.length - 1;
-          const remainder = alertItems.length % cols;
-          const inLastRow = remainder === 0 ? idx >= alertItems.length - cols : idx >= alertItems.length - remainder;
-          return `<div style="padding:10px 10px;border-right:${isLastCol||isVeryLast?'none':'0.5px solid #e5e5ea'};border-bottom:${inLastRow?'none':'0.5px solid #e5e5ea'}${isVeryLast&&remainder===1?';grid-column:span 3':isVeryLast&&remainder===2?';grid-column:span 2':''}">
-            <div style="font-size:11px;color:#8e8e93;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${item.name}</div>
-            <div style="font-size:12px;font-weight:500;color:${openDate?'#ff9500':'#8e8e93'}">${label}</div>
-          </div>`;
-        });
-        return `<div style="font-size:11px;color:#ff9500;font-weight:600;letter-spacing:.04em;margin-bottom:5px">開桶超過 6 天</div><div style="background:#fff;border:1px solid #e5e5ea;border-radius:12px;display:grid;grid-template-columns:1fr 1fr 1fr;margin-bottom:10px;overflow:hidden">${cells.join('')}</div>`;
-      })()}
-      <div class="card">${rotatingAll.map(teaCard).join('') || '<div style="padding:12px 0;color:#8e8e93">無品項</div>'}</div>
-
-      <div class="section-title">固定茶品</div>
-      <div class="card">${fixed.map(teaCard).join('')}</div>
-      <div style="text-align:center;color:#c7c7cc;font-size:11px;padding:4px 0 8px">v1.3</div>
-    </div>
-    <div class="status-bar">
-      <div class="status-item">
-        <div class="status-item-label">庫存登記</div>
-        <div class="status-item-val ${invDone?'done':'pending'}">${invDone ? invTime+'✓' : '未登記'}</div>
-      </div>
-      <div class="status-divider"></div>
-      <div class="status-item">
-        <div class="status-item-label">叫貨申請</div>
-        <div class="status-item-val ${orderDone?'done':'pending'}">${orderDone ? '已送出✓' : '未申請'}</div>
-      </div>
-      <div class="status-divider"></div>
-      <div class="status-item">
-        <div class="status-item-label">到貨確認</div>
-        <div class="status-item-val ${arrivalDone?'done':shippingDone?'waiting':'pending'}">${arrivalDone ? '完結✓' : shippingDone ? '待確認' : '等待中'}</div>
-      </div>
-    </div>
-    ${renderNavbar('home')}`;
-}
-
-// ── 庫存登記 ──────────────────────────────────
-function renderInventory() {
-  const { fixed, rotating, rotatingAll } = state.items;
-  const activeRotating = rotatingAll.filter(r => !r.paused);
-
-  function invRow(item, idx) {
-    const existing = getInvItem(item.name);
-    const qty = existing ? existing.qty : '';
-    const openDate = existing ? (existing.openDate || '').replace(/\//g,'-') : '';
-    const soldOutTime = existing ? (existing.soldOutTime || '') : '';
-    return `<div class="field-row" style="flex-wrap:wrap;gap:6px">
-      <div style="width:100%;display:flex;align-items:center;justify-content:space-between">
-        <span class="field-name">${item.name}</span>
-        <div style="display:flex;align-items:center;gap:6px">
-          <input class="field-input" type="tel" min="0" max="${item.cups}"
-            id="qty_${idx}" value="${qty}" placeholder="0">
-          <span class="field-unit">杯</span>
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;gap:6px">
-        <span style="font-size:12px;color:#8e8e93">開桶日：</span>
-        <input type="date" class="date-input" id="open_${idx}" value="${openDate}">
-      </div>
-      <div style="display:flex;align-items:center;gap:6px;padding-bottom:4px">
-        <span style="font-size:12px;color:#8e8e93">完售時間：</span>
-        <input type="time" class="date-input" id="sold_${idx}" value="${soldOutTime}">
-      </div>
-    </div>`;
-  }
-
-  return `
-    <div class="topbar">
-      <div class="topbar-inner">
-        <button class="back-btn" onclick="back()">← 返回</button>
-        <div class="topbar-title">庫存登記</div>
-        <div style="width:48px"></div>
-      </div>
-    </div>
-    <div class="content">
-      <div class="card" style="margin-bottom:8px">
-        <label style="display:flex;align-items:center;gap:10px;padding:4px 0;cursor:pointer">
-          <input type="checkbox" id="isOpening" style="width:18px;height:18px;cursor:pointer">
-          <span style="font-size:15px;font-weight:500">今日開局登記</span>
-        </label>
-        <label style="display:flex;align-items:center;gap:10px;padding:4px 0;cursor:pointer;margin-top:6px">
-          <input type="checkbox" id="isAdding" style="width:18px;height:18px;cursor:pointer">
-          <span style="font-size:15px;font-weight:500">追加開桶</span>
-        </label>
-        <label style="display:flex;align-items:center;gap:10px;padding:4px 0;cursor:pointer;margin-top:6px">
-          <input type="checkbox" id="isClosing" style="width:18px;height:18px;cursor:pointer">
-          <span style="font-size:15px;font-weight:500">閉店盤點</span>
-        </label>
-      </div>
-      <div class="section-title">傳統原味（杯）</div>
-      <div class="card">${activeRotating.map((item, i) => invRow(item, i)).join('')}</div>
-      <div class="section-title">固定茶品（杯）</div>
-      <div class="card">${fixed.map((item, i) => invRow(item, activeRotating.length + i)).join('')}</div>
-      <button class="btn-primary" onclick="saveInventory(this)">儲存庫存登記</button>
-    </div>
-    ${renderNavbar('')}`;
-}
-
-async function saveInventory(btn) {
-  const { fixed, rotatingAll } = state.items;
-  const activeRotating = rotatingAll.filter(r => !r.paused);
-  const allItems = [...activeRotating, ...fixed];
-  const items = [];
-
-  for (let idx = 0; idx < allItems.length; idx++) {
-    const item = allItems[idx];
-    const qtyEl = document.getElementById(`qty_${idx}`);
-    const openEl = document.getElementById(`open_${idx}`);
-    const soldEl = document.getElementById(`sold_${idx}`);
-    const qty = qtyEl ? qtyEl.value : '';
-    const openDate = openEl ? openEl.value.replace(/-/g,'/') : '';
-    const soldOutTime = soldEl ? soldEl.value : '';
-    if (qty !== '') items.push({ name: item.name, qty: Number(qty), openDate, soldOutTime });
-  }
-
-  if (!items.length) { showToast('請至少填寫一項'); return; }
-  const isOpening = document.getElementById('isOpening')?.checked || false;
-  const isAdding  = document.getElementById('isAdding')?.checked || false;
-  const isClosing = document.getElementById('isClosing')?.checked || false;
-  btn.disabled = true; btn.textContent = '儲存中...';
-
-  try {
-    const res = await apiPost({ action: 'saveInventory', date: todayStr(), items, isOpening, isAdding, isClosing });
-    if (res.ok) {
-      const now = new Date();
-      const timeStr = now.toTimeString().slice(0,5);
-      const mapped = items.map(i => ({ name: i.name, qty: i.qty, openDate: i.openDate, soldOutTime: i.soldOutTime }));
-      state.inventory = mapped;
-      if (isOpening) state.openingInventory = mapped;
-      state.invTodayUpdated = true;
-      state.invUpdateTime = todayStr() + ' ' + timeStr;
-      const cachedDaily = loadCache();
-      if (cachedDaily) {
-        cachedDaily.inv = { items: state.inventory, openingItems: state.openingInventory, todayUpdated: true, updateTime: state.invUpdateTime };
-        saveCache(cachedDaily);
-      }
-      showToast(isClosing ? '閉店盤點完成 ✓' : isAdding ? '追加開桶完成 ✓' : isOpening ? '開局登記完成 ✓' : '庫存登記完成 ✓');
-      go('home');
-    } else {
-      showToast('儲存失敗：' + (res.error || ''));
-      btn.disabled = false; btn.textContent = '儲存庫存登記';
-    }
-  } catch (e) {
-    showToast('儲存失敗，請重試');
-    btn.disabled = false; btn.textContent = '儲存庫存登記';
-  }
-}
-
-// ── 叫貨申請 ──────────────────────────────────
-function renderOrder() {
-  const { fixed, rotatingAll } = state.items;
-  const todayPrefix = todayStr().replace(/\//g, '');
-  const isToday = !!(state.order && state.order.orderId && state.order.orderId.startsWith(todayPrefix));
-  const isEdit = isToday && (state.order.status === '已申請' || state.order.status === '已出貨');
-  const existingOrder = isEdit ? state.order : null;
-
-  const nonPaused = rotatingAll.filter(r => !r.paused);
-  function getExistingQty(name, cat) {
-    if (!existingOrder) return null;
-    const found = existingOrder.items.find(i => i.name === name && i.cat === cat);
-    return found ? found.requested : null;
-  }
-
-  function teaRow(item, idx) {
-    const st = invStatus(item.name);
-    const isSoldOut = st === 'soldout';
-    const existQty = getExistingQty(item.name, '茶品');
-    let tagHtml = '';
-    let inputCls = '';
-    let defaultVal = existQty !== null ? existQty : '';
-    let opacity = '';
-    if (isSoldOut) { tagHtml = '<span style="font-size:11px;color:#8e8e93;margin-left:4px">售完</span>'; opacity = 'opacity:0.5;'; }
-    return `<div class="field-row" style="${opacity}">
-      <span class="field-name">${item.name}${tagHtml}</span>
-      <input class="field-input ${inputCls}" type="tel" min="0"
-        id="tea_${idx}" value="${defaultVal}" placeholder="0">
-      <span class="field-unit">杯</span>
-    </div>`;
-  }
-
-  const checkItems = INGREDIENTS.map(i => {
-    const checked = existingOrder ? existingOrder.items.some(x => x.name === i && x.cat === '配料') : false;
+  if (!s || !s.found) {
+    const canOpen = state.items.length > 0 && state.locations.length > 0;
     return `
-    <label class="check-item ${checked?'checked':''}" id="chk_${i}" onclick="toggleCheck('chk_${i}')">
-      <div class="check-box" id="chkbox_${i}">${checked?'✓':''}</div>
-      <span class="check-label">${i}</span>
-    </label>`;
-  }).join('');
-
-  const supplyRows = SUPPLIES.map(s => {
-    const existQty = getExistingQty(s, '備品');
-    return `
-    <div class="field-row">
-      <span class="field-name">${s}</span>
-      <input class="field-input" type="tel" min="0" id="sup_${s}" value="${existQty !== null ? existQty : ''}" placeholder="0">
-      <span class="field-unit">${SUPPLY_UNITS[s]}</span>
-    </div>`;
-  }).join('');
-
-  const requestTime = existingOrder ? (existingOrder.requestTime || '').split(' ')[1] || '' : '';
-
-  return `
-    <div class="topbar">
-      <div class="topbar-inner">
-        <button class="back-btn" onclick="back()">← 返回</button>
-        <div class="topbar-title">${isEdit ? '更新叫貨申請' : '叫貨申請'}</div>
-        <div style="width:48px"></div>
-      </div>
-      ${isEdit ? `<div class="topbar-sub">上次申請時間：${requestTime}</div>` : ''}
-    </div>
-    <div class="content">
-      <div class="section-title">傳統原味（杯）</div>
+    <div class="header"><h1>出攤管理</h1><div class="header-sub">${today}</div></div>
+    <div class="section">
       <div class="card">
-        ${rotatingAll.map((r, i) => teaRow(r, i)).join('')}
+        <div class="card-row" style="flex-direction:column;align-items:flex-start;gap:8px;padding:20px 16px">
+          <span class="status-badge status-none">今日尚未開攤</span>
+          ${!canOpen ? '<div style="font-size:14px;color:#8e8e93">請先在設定中新增品項與地點</div>' : ''}
+        </div>
       </div>
-      <div class="section-title">固定茶品（杯）</div>
-      <div class="card">${fixed.map((f, i) => teaRow(f, rotatingAll.length + i)).join('')}</div>
-      <div class="section-title">配料（勾選即出）</div>
-      <div class="check-grid">${checkItems}</div>
-      <div class="section-title" style="margin-top:16px">備品</div>
-      <div class="card">${supplyRows}</div>
-      <button class="btn-primary" onclick="${isEdit ? 'updateOrder(this)' : 'submitOrder(this)'}">${isEdit ? '更新叫貨' : '送出叫貨申請'}</button>
+      ${canOpen
+        ? `<button class="btn btn-primary" onclick="go('open-stall')">開始開攤</button>`
+        : `<button class="btn btn-secondary" onclick="go('settings')">前往設定</button>`}
     </div>`;
-}
-
-function toggleCheck(id) {
-  const el = document.getElementById(id);
-  el.classList.toggle('checked');
-  el.querySelector('.check-box').textContent = el.classList.contains('checked') ? '✓' : '';
-}
-
-function collectOrderItems() {
-  const { fixed, rotatingAll } = state.items;
-  const items = [];
-  [...rotatingAll, ...fixed].forEach((item, idx) => {
-    const el = document.getElementById(`tea_${idx}`);
-    const qty = el ? Number(el.value) || 0 : 0;
-    if (qty > 0) items.push({ cat:'茶品', name: item.name, qty });
-  });
-  INGREDIENTS.forEach(i => {
-    if (document.getElementById(`chk_${i}`)?.classList.contains('checked'))
-      items.push({ cat:'配料', name: i, qty: 1 });
-  });
-  SUPPLIES.forEach(s => {
-    const el = document.getElementById(`sup_${s}`);
-    const qty = el ? Number(el.value) || 0 : 0;
-    if (qty > 0) items.push({ cat:'備品', name: s, qty });
-  });
-  return items;
-}
-
-async function submitOrder(btn) {
-  const items = collectOrderItems();
-  if (!items.length) { showToast('請至少填寫一項需求'); return; }
-  btn.disabled = true; btn.textContent = '送出中...';
-  try {
-    const res = await apiPost({ action: 'submitOrder', date: todayStr(), items });
-    if (res.ok) {
-      const daily = await apiGet('getDailyData', { date: todayStr() });
-      if (!daily.error) { applyDaily(daily); saveCache(daily); }
-      state.historyCache = null;
-      showToast('叫貨申請已送出 ✓');
-      go('ordersheet');
-    } else {
-      showToast('送出失敗：' + (res.error || ''));
-      btn.disabled = false; btn.textContent = '送出叫貨申請';
-    }
-  } catch (e) {
-    showToast('送出失敗，請重試');
-    btn.disabled = false; btn.textContent = '送出叫貨申請';
   }
-}
 
-async function updateOrder(btn) {
-  const items = collectOrderItems();
-  btn.disabled = true; btn.textContent = '更新中...';
-  const res = await apiPost({ action: 'updateOrder', orderId: state.order.orderId, items });
-  if (res.ok) {
-    const daily = await apiGet('getDailyData', { date: todayStr() });
-    if (!daily.error) { applyDaily(daily); saveCache(daily); }
-    state.historyCache = null;
-    showToast('叫貨申請已更新 ✓');
-    go('ordersheet');
-  } else {
-    showToast('更新失敗：' + (res.error || ''));
-    btn.disabled = false; btn.textContent = '更新叫貨';
-  }
-}
-
-// ── 叫貨單 ────────────────────────────────────
-function renderOrderSheet() {
-  const order = state.order;
-  const todayPrefix = todayStr().replace(/\//g, '');
-  const isTodayOrder = !!(order && order.orderId && order.orderId.startsWith(todayPrefix));
-
-  if (!order || (!isTodayOrder && order.status !== '已出貨')) return `
-    <div class="topbar"><div class="topbar-inner"><div class="topbar-title">叫貨單</div></div></div>
-    <div class="content"><div class="loading">今日尚無叫貨申請</div></div>
-    ${renderNavbar('ordersheet')}`;
-
-  // 跨日到貨確認：只顯示精簡提示，不顯示完整舊訂單
-  if (!isTodayOrder && order.status === '已出貨') return `
-    <div class="topbar"><div class="topbar-inner"><div class="topbar-title">叫貨單</div></div></div>
-    <div class="content">
-      <div class="loading">今日尚無叫貨申請</div>
-      <div style="margin-top:16px;padding:16px;background:#fff;border-radius:12px;border:1px solid #e5e5ea;text-align:center">
-        <div style="font-size:13px;color:#8e8e93;margin-bottom:12px">昨日出貨單待確認到貨</div>
-        <button class="btn-primary" style="background:#34c759" onclick="go('arrival')">確認到貨</button>
+  if (s.status === '開攤中') {
+    const totalPrepared = s.items.reduce((a, i) => a + i.prepared, 0);
+    return `
+    <div class="header"><h1>出攤管理</h1><div class="header-sub">${today}</div></div>
+    <div class="section">
+      <div class="section-label">今日出攤</div>
+      <div class="card">
+        <div class="card-row"><span class="card-row-label">地點</span><span class="card-row-value">${s.location}</span></div>
+        <div class="card-row"><span class="card-row-label">狀態</span><span class="status-badge status-open">開攤中</span></div>
+        <div class="card-row"><span class="card-row-label">總備貨</span><span class="card-row-value">${totalPrepared} 杯</span></div>
       </div>
     </div>
-    ${renderNavbar('ordersheet')}`;
-
-
-  const teaItems = order.items.filter(i => i.cat === '茶品');
-  const ingItems  = order.items.filter(i => i.cat === '配料');
-  const supItems  = order.items.filter(i => i.cat === '備品');
-
-  const statusBadge = { '已申請':'<span class="badge pending">等待出貨</span>', '已出貨':'<span class="badge shipped">等待到貨</span>', '已完結':'<span class="badge done">已完結</span>' }[order.status] || '';
-
-  const canShip = order.status === '已申請';
-  const canArrive = order.status === '已出貨';
-
-  function monRow(item, unit) {
-    const req = item.requested;
-    const shipped = item.shipped !== '' ? item.shipped : req;
-    return `<div class="field-row">
-      <span class="field-name">${item.name}</span>
-      <input class="mon-input" type="tel" min="0" id="req_${item.name}"
-        value="${req}" ${canShip ? '' : 'disabled'} style="width:48px;text-align:center">
-      <span class="mon-arrow"> → </span>
-      <input class="mon-input" type="tel" min="0" id="ship_${item.name}"
-        value="${shipped}" ${canShip ? `oninput="checkAdj('ship_${item.name}',document.getElementById('req_${item.name}').value)"` : 'disabled'}>
-      <span class="field-unit">${unit}</span>
+    <div class="section">
+      <div class="section-label">品項明細</div>
+      <div class="card">
+        ${s.items.map(item => `
+          <div class="card-row">
+            <div style="flex:1">
+              <div style="font-size:16px">${item.name}</div>
+              ${item.sweetness ? `<div style="font-size:13px;color:#8e8e93">${item.sweetness}</div>` : ''}
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:16px;font-weight:500">${item.prepared} 杯</div>
+              <div style="font-size:13px;color:#8e8e93">${fmtMoney(item.price)}/杯</div>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>
+    <div class="section">
+      <button class="btn btn-success" onclick="go('close-stall')">收攤結算</button>
+      <button class="btn btn-secondary" onclick="go('open-stall')">修改開攤資料</button>
     </div>`;
   }
 
-  const ingTags = INGREDIENTS.map(i => {
-    const ordered = ingItems.find(x => x.name === i);
-    return `<div class="supply-tag ${ordered?'yes':'no'}">${ordered?'✓':'✕'} ${i}</div>`;
+  // 已收攤
+  const { revenue, wasteCost, totalPrepared, totalWaste } = calcStall(s.items);
+  return `
+  <div class="header"><h1>出攤管理</h1><div class="header-sub">${today}</div></div>
+  <div class="section">
+    <div class="section-label">今日結算</div>
+    <div class="card">
+      <div class="card-row"><span class="card-row-label">地點</span><span class="card-row-value">${s.location}</span></div>
+      <div class="card-row"><span class="card-row-label">狀態</span><span class="status-badge status-closed">已收攤</span></div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-label">今日數字</div>
+    <div class="card" style="padding:14px 16px">
+      <div class="total-row"><span class="total-label">營業額</span><span class="total-value blue">${fmtMoney(revenue)}</span></div>
+      <div class="total-row"><span class="total-label">報廢成本</span><span class="total-value red">${fmtMoney(wasteCost)}</span></div>
+      <div class="total-row"><span class="total-label">總備貨</span><span class="total-value">${totalPrepared} 杯</span></div>
+      <div class="total-row"><span class="total-label">報廢杯數</span><span class="total-value">${totalWaste} 杯</span></div>
+    </div>
+  </div>
+  <div class="section">
+    <button class="btn btn-primary" onclick="go('summary')">查看明細</button>
+  </div>`;
+}
+
+function calcStall(items) {
+  let revenue = 0, wasteCost = 0, totalPrepared = 0, totalWaste = 0;
+  items.forEach(item => {
+    if (item.waste !== null) {
+      revenue    += (item.prepared - item.waste) * item.price;
+      wasteCost  += item.waste * item.cost;
+      totalPrepared += item.prepared;
+      totalWaste    += item.waste;
+    }
+  });
+  return { revenue, wasteCost, totalPrepared, totalWaste };
+}
+
+/* ============================================================
+   OPEN STALL
+   ============================================================ */
+function renderOpenStall() {
+  const isEdit = state.stall && state.stall.found;
+  const existing = isEdit ? state.stall : null;
+
+  const locationOptions = state.locations.map(l =>
+    `<option value="${l}" ${existing && existing.location === l ? 'selected' : ''}>${l}</option>`
+  ).join('');
+
+  const itemOptions = (selectedName) =>
+    state.items.map(item =>
+      `<option value="${item.name}" ${item.name === selectedName ? 'selected' : ''}>${item.name}</option>`
+    ).join('');
+
+  const slots = Array.from({length: 4}, (_, i) => {
+    const ex = existing && existing.items[i];
+    const itemName    = ex ? ex.name : '';
+    const itemSweet   = ex ? ex.sweetness : '';
+    const itemPrepare = ex ? ex.prepared : '';
+    const selItem = state.items.find(it => it.name === itemName);
+    const showSweet = selItem && selItem.sweetnesses.length > 0;
+    const sweetOptions = showSweet
+      ? selItem.sweetnesses.map(s => `<option value="${s}" ${s === itemSweet ? 'selected' : ''}>${s}</option>`).join('')
+      : '';
+
+    return `
+    <div class="item-slot">
+      <div class="slot-header">
+        <div class="slot-num">${i+1}</div>
+        <span class="slot-title">品項 ${i+1}</span>
+      </div>
+      <div class="slot-grid">
+        <div class="full">
+          <label>選擇品項</label>
+          <select id="item_${i}" onchange="onItemSelect(${i})">
+            <option value="">— 不使用 —</option>
+            ${itemOptions(itemName)}
+          </select>
+        </div>
+        <div id="sweet_wrap_${i}" style="${showSweet ? '' : 'display:none'}">
+          <label>甜度</label>
+          <select id="sweet_${i}">${sweetOptions}</select>
+        </div>
+        <div>
+          <label>備貨（杯）</label>
+          <input type="tel" id="qty_${i}" value="${itemPrepare}" placeholder="0">
+        </div>
+      </div>
+    </div>`;
   }).join('');
 
   return `
-    <div class="topbar">
-      <div class="topbar-inner">
-        <div class="topbar-title">叫貨單</div>
-        ${statusBadge}
-      </div>
-      <div class="topbar-sub">申請 ${(order.requestTime||'').split(' ')[1]||''} ${order.shippingTime ? '・出貨 '+(order.shippingTime||'').split(' ')[1] : ''}</div>
+  <div class="header">
+    <div class="header-row">
+      <span class="back-btn" onclick="go('home')">
+        <svg width="10" height="16" viewBox="0 0 10 16" fill="none"><path d="M8 2L2 8l6 6" stroke="#007AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        返回
+      </span>
+      <h1>${isEdit ? '修改開攤' : '開始開攤'}</h1>
+      <span style="width:48px"></span>
     </div>
-    <div class="content">
-      ${teaItems.length ? `
-        <div class="section-title">茶品</div>
-        <div style="display:flex;justify-content:flex-end;gap:16px;margin-bottom:4px;padding-right:20px">
-          <span style="font-size:12px;color:#8e8e93">申請</span>
-          <span style="font-size:12px;color:#007aff">出貨</span>
-        </div>
-        <div class="card">${teaItems.map(i => monRow(i,'杯')).join('')}</div>` : ''}
-
-      <div class="section-title">配料</div>
-      <div class="supply-grid">${ingTags}</div>
-
-      ${supItems.length ? `
-        <div class="section-title">備品</div>
-        <div class="card">${supItems.map(i => monRow(i, SUPPLY_UNITS[i.name]||'')).join('')}</div>` : ''}
-
-      ${canShip ? `
-        <p style="font-size:12px;color:#8e8e93;margin-top:8px;text-align:center">橘色 = 出貨量已調整</p>
-        <button class="btn-primary" onclick="confirmShipping(this)">確認出貨</button>` : ''}
-      ${canArrive ? `
-        <button class="btn-secondary" style="margin-top:16px" onclick="go('order')">修改叫貨</button>
-        <button class="btn-primary" style="background:#34c759;margin-top:8px" onclick="go('arrival')">確認到貨</button>` : ''}
-      ${order.status === '已完結' ? `
-        <div style="text-align:center;padding:16px;color:#34c759;font-weight:500">✓ 此單已完結</div>` : ''}
+  </div>
+  <div class="section">
+    <div class="section-label">出攤地點</div>
+    <div class="card" style="padding:14px 16px">
+      ${state.locations.length > 0
+        ? `<select id="location" style="border:none;padding:0;font-size:17px;background:transparent;color:#1c1c1e;width:100%;background-image:none">${locationOptions}</select>`
+        : '<div style="font-size:14px;color:#ff3b30">請先在設定中新增地點</div>'}
     </div>
-    ${renderNavbar('ordersheet')}`;
+  </div>
+  <div class="section">
+    <div class="section-label">品項與備貨量（最多 4 項）</div>
+    ${slots}
+    <button class="btn btn-primary" id="submitOpen" onclick="submitOpenStall(this)">確認開攤</button>
+  </div>`;
 }
 
-function checkAdj(id, original) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.classList.toggle('adjusted', Number(el.value) !== Number(original));
-}
-
-async function confirmShipping(btn) {
-  const order = state.order;
-  const items = order.items
-    .filter(i => i.cat !== '配料')
-    .map(i => {
-      const shipEl = document.getElementById(`ship_${i.name}`);
-      const reqEl  = document.getElementById(`req_${i.name}`);
-      return {
-        name: i.name,
-        requested: reqEl ? Number(reqEl.value) : i.requested,
-        shipped: shipEl ? Number(shipEl.value) : i.requested,
-      };
-    });
-
-  btn.disabled = true; btn.textContent = '確認中...';
-  const res = await apiPost({ action: 'confirmShipping', orderId: order.orderId, items });
-  if (res.ok) {
-    const daily = await apiGet('getDailyData', { date: todayStr() });
-    if (!daily.error) { applyDaily(daily); saveCache(daily); }
-    state.historyCache = null;
-    showToast('出貨已確認 ✓');
-    go('home');
+function onItemSelect(idx) {
+  const name = document.getElementById(`item_${idx}`).value;
+  const item = state.items.find(i => i.name === name);
+  const wrapEl  = document.getElementById(`sweet_wrap_${idx}`);
+  const sweetEl = document.getElementById(`sweet_${idx}`);
+  if (item && item.sweetnesses.length > 0) {
+    wrapEl.style.display = '';
+    sweetEl.innerHTML = item.sweetnesses.map(s => `<option value="${s}">${s}</option>`).join('');
   } else {
-    showToast('確認失敗：' + (res.error || ''));
-    btn.disabled = false; btn.textContent = '確認出貨';
+    wrapEl.style.display = 'none';
   }
 }
 
-// ── 到貨確認 ──────────────────────────────────
-function renderArrival() {
-  const order = state.order;
-  if (!order) { go('home'); return ''; }
+async function submitOpenStall(btn) {
+  const locEl = document.getElementById('location');
+  const location = locEl ? locEl.value : '';
+  if (!location) { toast('請選擇地點'); return; }
 
-  const nonIng = order.items.filter(i => i.cat !== '配料');
-  const ing    = order.items.filter(i => i.cat === '配料');
+  const items = [];
+  for (let i = 0; i < 4; i++) {
+    const nameEl = document.getElementById(`item_${i}`);
+    const name = nameEl ? nameEl.value : '';
+    if (!name) continue;
+    const wrapEl = document.getElementById(`sweet_wrap_${i}`);
+    const sweetEl = document.getElementById(`sweet_${i}`);
+    const sweetness = (wrapEl && wrapEl.style.display !== 'none' && sweetEl) ? sweetEl.value : '';
+    const qtyEl = document.getElementById(`qty_${i}`);
+    const prepared = parseInt(qtyEl ? qtyEl.value : '0') || 0;
+    if (prepared <= 0) { toast(`品項 ${i+1} 備貨量需大於 0`); return; }
+    if (items.some(it => it.name === name)) { toast(`「${name}」重複選取`); return; }
+    items.push({ name, sweetness, prepared });
+  }
+  if (items.length === 0) { toast('請至少填寫一項品項'); return; }
 
-  const nonIngRows = nonIng.map(i => {
-    const unit = i.cat === '茶品' ? '杯' : (SUPPLY_UNITS[i.name] || '');
-    const shipped = i.shipped !== '' ? i.shipped : i.requested;
-    return `<div class="arr-item">
-      <div class="arr-check" id="arr_${i.name}" onclick="toggleArrCheck('${i.name}')"></div>
-      <div style="flex:1">
-        <div style="font-size:15px">${i.name}</div>
-        <div style="font-size:12px;color:#8e8e93">出貨 ${shipped} ${unit}</div>
+  btn.disabled = true;
+  btn.textContent = '處理中…';
+  try {
+    const res = await apiPost({ action: 'openStall', date: todayStr(), location, items });
+    if (res.ok) {
+      await refreshStall();
+      toast('開攤成功');
+      go('home');
+    } else { toast(res.error || '操作失敗'); }
+  } catch(e) { toast('網路錯誤，請重試'); }
+  btn.disabled = false;
+  btn.textContent = '確認開攤';
+}
+
+/* ============================================================
+   CLOSE STALL
+   ============================================================ */
+function renderCloseStall() {
+  const s = state.stall;
+  if (!s || !s.found || s.status !== '開攤中') {
+    return `<div class="header"><h1>收攤結算</h1></div><div class="loading">無開攤中的紀錄</div>`;
+  }
+
+  const rows = s.items.map((item, i) => `
+    <div class="item-slot">
+      <div class="slot-header">
+        <div class="slot-num" style="background:#34c759">${i+1}</div>
+        <div style="flex:1">
+          <div class="slot-title">${item.name}</div>
+          ${item.sweetness ? `<div style="font-size:12px;color:#8e8e93">${item.sweetness}</div>` : ''}
+        </div>
+        <div style="text-align:right;font-size:13px;color:#8e8e93">備貨 ${item.prepared} 杯</div>
       </div>
-      <input class="field-input" type="tel" min="0" id="arrqty_${i.name}" value="${shipped}" style="width:56px">
-      <span class="field-unit">${unit}</span>
-    </div>`;
-  }).join('');
-
-  const ingRows = ing.map(i => `
-    <div class="arr-item">
-      <div class="arr-check" id="arr_${i.name}" onclick="toggleArrCheck('${i.name}')"></div>
-      <div style="font-size:15px">${i.name}</div>
+      <div class="slot-grid">
+        <div>
+          <label>報廢（剩餘）杯數</label>
+          <input type="tel" id="waste_${i}" placeholder="0" min="0" max="${item.prepared}"
+            oninput="updateSoldPreview(${i},${item.prepared},${item.price})">
+        </div>
+        <div>
+          <label>售出預覽</label>
+          <div id="preview_${i}" style="padding:10px 12px;background:#f2f2f7;border-radius:10px;font-size:15px;color:#34c759;font-weight:500">
+            ${item.prepared} 杯 · ${fmtMoney(item.prepared * item.price)}
+          </div>
+        </div>
+      </div>
     </div>`).join('');
 
   return `
-    <div class="topbar">
-      <div class="topbar-inner">
-        <button class="back-btn" onclick="go('ordersheet')">← 返回</button>
-        <div class="topbar-title">到貨確認</div>
-        <div style="width:48px"></div>
-      </div>
+  <div class="header">
+    <div class="header-row">
+      <span class="back-btn" onclick="go('home')">
+        <svg width="10" height="16" viewBox="0 0 10 16" fill="none"><path d="M8 2L2 8l6 6" stroke="#007AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        返回
+      </span>
+      <h1>收攤結算</h1>
+      <span style="width:48px"></span>
     </div>
-    <div class="content">
-      <p style="font-size:13px;color:#8e8e93;margin-bottom:16px">逐項打勾確認收到，數量有差異請修改。最終數量將成為實際出貨紀錄。</p>
-      ${nonIng.length ? `<div class="section-title">茶品 / 備品</div><div class="card">${nonIngRows}</div>` : ''}
-      ${ing.length ? `<div class="section-title">配料</div><div class="card">${ingRows}</div>` : ''}
-      <button class="btn-primary" style="background:#34c759" onclick="confirmArrival(this)">完成到貨確認</button>
-    </div>`;
+  </div>
+  <div class="section">
+    <div class="section-label">填寫各品項剩餘（報廢）杯數</div>
+    ${rows}
+    <button class="btn btn-success" id="submitClose" onclick="submitCloseStall(this)">確認收攤</button>
+  </div>`;
 }
 
-function toggleArrCheck(name) {
-  const el = document.getElementById(`arr_${name}`);
-  el.classList.toggle('checked');
-  el.textContent = el.classList.contains('checked') ? '✓' : '';
+function updateSoldPreview(idx, prepared, price) {
+  const waste = parseInt(document.getElementById(`waste_${idx}`).value) || 0;
+  const sold = Math.max(0, prepared - waste);
+  document.getElementById(`preview_${idx}`).textContent = `${sold} 杯 · ${fmtMoney(sold * price)}`;
 }
 
-async function confirmArrival(btn) {
-  const order = state.order;
-  const nonIng = order.items.filter(i => i.cat !== '配料');
-  const ing    = order.items.filter(i => i.cat === '配料');
-  const items = [];
-
-  nonIng.forEach(i => {
-    const el = document.getElementById(`arrqty_${i.name}`);
-    items.push({ name: i.name, arrived: el ? Number(el.value) : 0 });
-  });
-  ing.forEach(i => {
-    const checked = document.getElementById(`arr_${i.name}`)?.classList.contains('checked');
-    items.push({ name: i.name, arrived: checked ? 1 : 0 });
+async function submitCloseStall(btn) {
+  const s = state.stall;
+  const items = s.items.map((item, i) => {
+    const waste = parseInt(document.getElementById(`waste_${i}`)?.value || '0') || 0;
+    return { name: item.name, waste };
   });
 
-  btn.disabled = true; btn.textContent = '確認中...';
-  const res = await apiPost({ action: 'confirmArrival', orderId: order.orderId, items });
-  if (res.ok) {
-    const orderRes = await apiGet('getOrder', { date: todayStr() });
-    state.order = orderRes.found ? orderRes : null;
-    state.historyCache = null;
-    showToast('到貨確認完成 ✓');
-    go('home');
-  } else {
-    showToast('確認失敗：' + (res.error || ''));
-    btn.disabled = false; btn.textContent = '完成到貨確認';
-  }
-}
-
-// ── 設定 ──────────────────────────────────────
-function renderSettings() {
-  const { rotatingAll } = state.items;
-  const rows = rotatingAll.map(item => {
-    const isPaused = item.paused;
-    const isActive = item.status === '現售';
-    return `
-      <div class="field-row">
-        <div style="flex:1">
-          <div class="field-name">${item.name}</div>
-          <div style="font-size:12px;color:#8e8e93;margin-top:2px">
-            ${isActive ? '現售中' : item.status === '售完' ? '售完' : isPaused ? '已暫停' : '候補中'}
-          </div>
-        </div>
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-          <span style="font-size:13px;color:${isPaused?'#ff3b30':'#8e8e93'}">${isPaused?'暫停':'正常'}</span>
-          <div onclick="togglePause('${item.name}', this)" style="
-            width:48px;height:28px;border-radius:14px;
-            background:${isPaused?'#ff3b30':'#e5e5ea'};
-            position:relative;cursor:pointer;transition:background 0.2s;flex-shrink:0">
-            <div style="
-              position:absolute;top:3px;
-              left:${isPaused?'23px':'3px'};
-              width:22px;height:22px;border-radius:11px;
-              background:#fff;transition:left 0.2s">
-            </div>
-          </div>
-        </label>
-      </div>`;
-  }).join('');
-
-  return `
-    <div class="topbar">
-      <div class="topbar-inner">
-        <button class="back-btn" onclick="back()">← 返回</button>
-        <div class="topbar-title">輪替設定</div>
-        <div style="width:48px"></div>
-      </div>
-    </div>
-    <div class="content">
-      <p style="font-size:13px;color:#8e8e93;margin-bottom:16px">暫停的品項在輪替時會自動跳過，取消後恢復正常順序。</p>
-      <div class="card">${rows}</div>
-    </div>`;
-}
-
-async function togglePause(name, el) {
-  const res = await apiPost({ action: 'togglePause', item: name });
-  if (res.ok) {
-    const itemsCache = loadItemsCache();
-    if (itemsCache) {
-      const target = itemsCache.rotatingAll.find(r => r.name === name);
-      if (target) target.paused = !target.paused;
-      saveItemsCache(itemsCache);
-      state.items = itemsCache;
+  for (let i = 0; i < items.length; i++) {
+    if (items[i].waste > s.items[i].prepared) {
+      toast(`「${s.items[i].name}」報廢不能超過備貨量`);
+      return;
     }
-    showToast('設定已更新 ✓');
-    render();
-  } else {
-    showToast('操作失敗');
-  }
-}
-
-// ── 統計 ──────────────────────────────────────
-function renderStats() {
-  const today = todayStr();
-  const d30 = (() => { const d = new Date(); d.setDate(d.getDate() - 29); return d.toISOString().slice(0,10).replace(/-/g,'/'); })();
-  return `
-    <div class="topbar"><div class="topbar-inner"><div class="topbar-title">完售紀錄統計</div></div></div>
-    <div class="content" style="padding-bottom:80px">
-      <div class="card" style="margin-bottom:10px">
-        <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px">
-          <div>
-            <div style="font-size:11px;color:#8e8e93;margin-bottom:4px">開始日期</div>
-            <input type="date" id="stats-start" value="${d30.replace(/\//g,'-')}" onchange="loadStats()" style="font-size:13px;padding:6px 8px;border-radius:8px;border:1px solid #e5e5ea;background:var(--bg,#f8f8f8);color:inherit;width:140px">
-          </div>
-          <div style="color:#8e8e93;padding-bottom:6px">—</div>
-          <div>
-            <div style="font-size:11px;color:#8e8e93;margin-bottom:4px">結束日期</div>
-            <input type="date" id="stats-end" value="${today.replace(/\//g,'-')}" onchange="loadStats()" style="font-size:13px;padding:6px 8px;border-radius:8px;border:1px solid #e5e5ea;background:var(--bg,#f8f8f8);color:inherit;width:140px">
-          </div>
-        </div>
-        <div style="font-size:11px;color:#8e8e93;margin-bottom:6px">品項選擇</div>
-        <div id="stats-chips" style="display:flex;gap:6px;flex-wrap:wrap"></div>
-      </div>
-      <div class="card">
-        <div id="stats-legend" style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:12px;font-size:11px;color:#8e8e93"></div>
-        <div style="overflow-x:auto">
-          <svg id="stats-chart" width="100%" viewBox="0 0 620 300" preserveAspectRatio="xMidYMid meet"></svg>
-        </div>
-        <div style="font-size:11px;color:#8e8e93;text-align:center;margin-top:8px">
-          ● 實心=完售（上:開局數 下:完售時間）　○ 空心=未完售（上:開局數 下:紅字剩餘）　◆ 追加開桶
-        </div>
-      </div>
-    </div>
-    ${renderNavbar('stats')}`;
-}
-
-const STATS_COLORS = ['#007AFF','#34C759','#FF9F0A','#AF52DE','#FF3B30','#5AC8FA','#FF6B35','#00C896','#C44DFF','#FFB800','#0095B6','#E8534E'];
-let statsData = [], statsActiveItems = [];
-
-function statsChipHtml(name, color, active) {
-  return `<span onclick="statsToggleItem('${name}')" id="stats-chip-${name}" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;user-select:none;background:${active?color:'#eef4ff'};color:${active?'#fff':color};transition:all 0.15s">
-    <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${active?'#fff':color}"></span>${name}</span>`;
-}
-
-function statsToggleItem(name) {
-  if (statsActiveItems.includes(name)) {
-    if (statsActiveItems.length === 1) return;
-    statsActiveItems = statsActiveItems.filter(x => x !== name);
-  } else {
-    statsActiveItems.push(name);
-  }
-  statsRender();
-}
-
-async function loadStats() {
-  const startEl = document.getElementById('stats-start');
-  const endEl   = document.getElementById('stats-end');
-  if (!startEl) return;
-  const startDate = startEl.value.replace(/-/g,'/');
-  const endDate   = endEl.value.replace(/-/g,'/');
-  const legend = document.getElementById('stats-legend');
-  if (legend) legend.innerHTML = '<span style="color:#8e8e93">載入中...</span>';
-  const res = await apiGet('getSoldOutHistory', { startDate, endDate });
-  if (res.error) { if (legend) legend.innerHTML = '載入失敗'; return; }
-  statsData = res.records || [];
-  // Collect unique items
-  const names = [...new Set(statsData.map(r => r.name))];
-  statsActiveItems = [...names];
-  statsRender();
-}
-
-function statsRender() {
-  const names = [...new Set(statsData.map(r => r.name))];
-  // Chips
-  const chipsEl = document.getElementById('stats-chips');
-  if (chipsEl) chipsEl.innerHTML = names.map((n,i) => statsChipHtml(n, STATS_COLORS[i % STATS_COLORS.length], statsActiveItems.includes(n))).join('');
-  // Legend
-  const legendEl = document.getElementById('stats-legend');
-  if (legendEl) legendEl.innerHTML = statsActiveItems.map((n,i) => {
-    const c = STATS_COLORS[names.indexOf(n) % STATS_COLORS.length];
-    return `<span style="display:flex;align-items:center;gap:5px"><span style="display:inline-block;width:18px;height:2px;background:${c};border-radius:1px"></span>${n}</span>`;
-  }).join('');
-  statsDrawChart();
-}
-
-function statsDrawChart() {
-  const svg = document.getElementById('stats-chart');
-  if (!svg) return;
-  const W = 620, H = 300;
-  const PAD = { top: 20, right: 20, bottom: 36, left: 52 };
-  const cW = W - PAD.left - PAD.right, cH = H - PAD.top - PAD.bottom;
-  const CLOSING_MIN = 15 * 60 + 30;
-
-  // Get all dates in range
-  const allDates = [...new Set(statsData.map(r => r.date))].sort();
-  const n = allDates.length;
-  if (!n) { svg.innerHTML = '<text x="310" y="150" text-anchor="middle" font-size="13" fill="#8e8e93">無資料</text>'; return; }
-
-  const names = [...new Set(statsData.map(r => r.name))];
-  const activeCount = statsActiveItems.length;
-
-  function timeToMin(t) { if (!t) return null; const [h,m] = t.split(':').map(Number); return h*60+m; }
-  function minToLabel(m) { return Math.floor(m/60)+':'+ String(m%60).padStart(2,'0'); }
-
-  // Determine time range from actual data
-  const allMins = statsData.filter(r => r.soldOutTime).map(r => timeToMin(r.soldOutTime)).filter(Boolean);
-  const tMin = allMins.length ? Math.min(...allMins, CLOSING_MIN) - 30 : 660;
-  const tMax = Math.max(...allMins, CLOSING_MIN) + 30;
-  const tMinR = Math.floor(tMin/30)*30, tMaxR = Math.ceil(tMax/30)*30;
-
-  const xPos = i => PAD.left + (n > 1 ? (i / (n-1)) * cW : cW/2);
-  const yTime = m => PAD.top + ((m - tMinR) / (tMaxR - tMinR)) * cH;
-
-  let html = '';
-
-  // Grid + Y axis labels
-  for (let m = tMinR; m <= tMaxR; m += 30) {
-    const y = yTime(m);
-    const major = m % 60 === 0;
-    html += `<line stroke="${major?'#e5e5ea':'#f0f0f4'}" stroke-width="${major?1:0.5}" x1="${PAD.left}" y1="${y}" x2="${PAD.left+cW}" y2="${y}"/>`;
-    if (major) html += `<text font-size="10" fill="#8e8e93" x="${PAD.left-6}" y="${y+3.5}" text-anchor="end" font-family="system-ui">${minToLabel(m)}</text>`;
   }
 
-  // Closing line
-  const yClose = yTime(CLOSING_MIN);
-  html += `<line stroke="#FF3B30" stroke-width="1.5" stroke-dasharray="5,4" x1="${PAD.left}" y1="${yClose}" x2="${PAD.left+cW}" y2="${yClose}" opacity="0.7"/>`;
-  html += `<text font-size="9" fill="#FF3B30" x="${PAD.left+cW+4}" y="${yClose+3.5}" font-family="system-ui">打烊</text>`;
-
-  // X axis
-  allDates.forEach((d, i) => {
-    const label = d.slice(4, 6) + '/' + d.slice(6, 8);
-    html += `<text font-size="10" fill="#8e8e93" x="${xPos(i)}" y="${PAD.top+cH+14}" text-anchor="middle" font-family="system-ui">${label}</text>`;
-  });
-  html += `<line stroke="#e5e5ea" x1="${PAD.left}" y1="${PAD.top}" x2="${PAD.left}" y2="${PAD.top+cH}"/>`;
-  html += `<line stroke="#e5e5ea" x1="${PAD.left}" y1="${PAD.top+cH}" x2="${PAD.left+cW}" y2="${PAD.top+cH}"/>`;
-
-  function pill(x, y, text, color) {
-    const w = String(text).length * 5.5 + 8, h = 13;
-    return `<rect x="${x-w/2}" y="${y-h+2}" width="${w}" height="${h}" rx="3" fill="white" opacity="0.85"/>` +
-           `<text font-size="9" fill="${color}" x="${x}" y="${y}" text-anchor="middle" font-weight="600" font-family="system-ui">${text}</text>`;
-  }
-
-  // Per item
-  statsActiveItems.forEach((name, aidx) => {
-    const color = STATS_COLORS[names.indexOf(name) % STATS_COLORS.length];
-    const dotOffset = (aidx - (activeCount-1)/2) * 4;
-    const lblOffset = (aidx - (activeCount-1)/2) * 22;
-
-    // Line points
-    const pts = allDates.map((d, i) => {
-      const rec = statsData.find(r => r.date === d && r.name === name);
-      if (!rec) return null;
-      const m = rec.soldOutTime ? timeToMin(rec.soldOutTime) : CLOSING_MIN;
-      return `${xPos(i)+dotOffset},${yTime(m)}`;
-    }).filter(Boolean).join(' ');
-    if (pts) html += `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" opacity="0.85"/>`;
-
-    // Dots
-    allDates.forEach((d, i) => {
-      const rec = statsData.find(r => r.date === d && r.name === name);
-      if (!rec) return;
-      const hasSoldOut = !!rec.soldOutTime;
-      const m = hasSoldOut ? timeToMin(rec.soldOutTime) : CLOSING_MIN;
-      const cx = xPos(i) + dotOffset, cy = yTime(m);
-      const lx = xPos(i) + lblOffset;
-
-      const qtyOffset = rec.addedAt ? -24 : -10;
-      if (hasSoldOut) {
-        html += `<circle cx="${cx}" cy="${cy}" r="5.5" fill="${color}"/>`;
-        if (rec.openingQty !== null) html += pill(lx, cy+qtyOffset, rec.openingQty, color);
-        html += pill(lx, cy+17, rec.soldOutTime, color);
-      } else {
-        html += `<circle cx="${cx}" cy="${cy}" r="5.5" fill="white" stroke="${color}" stroke-width="2"/>`;
-        if (rec.openingQty !== null) html += pill(lx, cy+qtyOffset, rec.openingQty, color);
-        if (rec.closingQty !== null) {
-          const w2 = String(rec.closingQty).length * 5.5 + 8, h2 = 13;
-          html += `<rect x="${lx-w2/2}" y="${cy+4}" width="${w2}" height="${h2}" rx="3" fill="white" opacity="0.85"/>`;
-          html += `<text font-size="9" fill="#FF3B30" x="${lx}" y="${cy+14}" text-anchor="middle" font-weight="600" font-family="system-ui">${rec.closingQty}</text>`;
-        }
-      }
-
-      // 追加菱形
-      if (rec.addedAt) {
-        const am = timeToMin(rec.addedAt);
-        const ay = yTime(am), s = 6;
-        html += `<polygon points="${cx},${ay-s} ${cx+s},${ay} ${cx},${ay+s} ${cx-s},${ay}" fill="${color}" opacity="0.9"/>`;
-        html += pill(lx, ay-12, '追加 '+rec.addedAt, color);
-      }
-    });
-  });
-
-  svg.innerHTML = html;
-}
-
-// ── 歷史 ──────────────────────────────────────
-function renderHistory() {
-  return `
-    <div class="topbar"><div class="topbar-inner"><div class="topbar-title">歷史紀錄</div></div></div>
-    <div class="content" id="hist-content"><div class="loading">載入中...</div></div>
-    ${renderNavbar('history')}`;
-}
-
-function renderHistoryRecords(records) {
-  const el = document.getElementById('hist-content');
-  if (!el) return;
-  if (!records.length) { el.innerHTML = '<div class="loading">尚無歷史紀錄</div>'; return; }
-  const statusMap = {
-    '已申請':'<span class="badge pending">已申請</span>',
-    '已出貨':'<span class="badge shipped">已出貨</span>',
-    '已完結':'<span class="badge done">已完結</span>',
-  };
-  el.innerHTML = `<div class="card" style="padding:0 16px">${records.map(r => `
-    <div>
-      <div class="hist-row" style="cursor:pointer" onclick="toggleHistDetail('${r.orderId}', '${r.date}')">
-        <div style="flex:1">
-          <div class="hist-date">${r.date}${r.orderId.includes('-') ? ' 第'+r.orderId.split('-')[1]+'張' : ''}</div>
-          <div class="hist-meta">
-            申請 ${(r.requestTime||'').split(' ')[1]||'—'}
-            ${r.shippingTime ? '・出貨 '+(r.shippingTime||'').split(' ')[1] : ''}
-            ${r.arrivalTime  ? '・到貨 '+(r.arrivalTime||'').split(' ')[1]  : ''}
-          </div>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px">
-          ${statusMap[r.status]||''}
-          <span id="hist-arrow-${r.orderId}" style="color:#8e8e93;font-size:12px">▼</span>
-        </div>
-      </div>
-      <div id="hist-detail-${r.orderId}" style="display:none;padding:8px 0 12px;border-top:1px solid #f2f2f7">
-        <div style="color:#8e8e93;font-size:13px">載入中...</div>
-      </div>
-    </div>`).join('')}</div>`;
-}
-
-async function loadHistory() {
-  if (state.historyCache) { renderHistoryRecords(state.historyCache); return; }
-  const res = await apiGet('getHistory');
-  state.historyCache = res.records || [];
-  renderHistoryRecords(state.historyCache);
-}
-
-async function toggleHistDetail(orderId, date) {
-  const detail = document.getElementById(`hist-detail-${orderId}`);
-  const arrow  = document.getElementById(`hist-arrow-${orderId}`);
-  if (!detail) return;
-
-  if (detail.style.display !== 'none') {
-    detail.style.display = 'none';
-    arrow.textContent = '▼';
-    return;
-  }
-
-  detail.style.display = 'block';
-  arrow.textContent = '▲';
-
-  if (detail.dataset.loaded) return;
-  detail.dataset.loaded = '1';
-
-  const res = await apiGet('getOrder', { orderId });
-  if (!res.found || !res.items || !res.items.length) {
-    detail.innerHTML = '<div style="color:#8e8e93;font-size:13px">無明細資料</div>';
-    return;
-  }
-
-  const teaItems = res.items.filter(i => i.cat === '茶品' && Number(i.requested) > 0);
-  const ingItems = res.items.filter(i => i.cat === '配料');
-  const supItems = res.items.filter(i => i.cat === '備品' && Number(i.requested) > 0);
-
-  let html = '';
-  if (teaItems.length) {
-    html += `<div style="font-size:12px;color:#8e8e93;margin-bottom:4px">茶品</div>`;
-    html += teaItems.map(i => `
-      <div style="display:flex;justify-content:space-between;font-size:14px;padding:3px 0">
-        <span>${i.name}</span>
-        <span style="color:#007aff">${i.requested} 杯${i.shipped!==''&&i.shipped!=i.requested?' → '+i.shipped+' 杯':''}</span>
-      </div>`).join('');
-  }
-  if (ingItems.length) {
-    html += `<div style="font-size:12px;color:#8e8e93;margin:8px 0 4px">配料</div>`;
-    html += `<div style="font-size:14px;color:#3c3c43">${ingItems.map(i=>i.name).join('、')}</div>`;
-  }
-  if (supItems.length) {
-    html += `<div style="font-size:12px;color:#8e8e93;margin:8px 0 4px">備品</div>`;
-    html += supItems.map(i => `
-      <div style="display:flex;justify-content:space-between;font-size:14px;padding:3px 0">
-        <span>${i.name}</span>
-        <span style="color:#007aff">${i.requested}</span>
-      </div>`).join('');
-  }
-
-  html += `<button onclick="deleteOrder('${orderId}')" style="margin-top:12px;width:100%;padding:8px;background:none;border:1px solid #ff3b30;border-radius:8px;color:#ff3b30;font-size:14px;cursor:pointer">刪除此叫貨單</button>`;
-  detail.innerHTML = html || '<div style="color:#8e8e93;font-size:13px">無明細資料</div>';
-}
-
-async function deleteOrder(orderId) {
-  if (!confirm('確定要刪除這張叫貨單？此操作無法復原。')) return;
-  const res = await apiPost({ action: 'deleteOrder', orderId });
-  if (res.ok) {
-    state.historyCache = null;
-    showToast('已刪除 ✓');
-    go('history');
-  } else {
-    showToast('刪除失敗：' + (res.error || ''));
-  }
-}
-
-// ── 標記售完 ──────────────────────────────────
-async function markSoldOut(name) {
-  if (!confirm(`確認「${name}」已售完？\n系統將切換至下一輪替品項。`)) return;
-  const res = await apiPost({ action: 'markSoldOut', item: name });
-  if (res.ok) {
-    const daily = await apiGet('getDailyData', { date: todayStr() });
-    if (!daily.error) { applyDaily(daily); saveCache(daily); }
-    showToast(`${name} 已標記售完 ✓`);
-    render();
-  } else {
-    showToast('操作失敗：' + (res.error || ''));
-  }
-}
-
-// ── 報廢記錄 ──────────────────────────────────
-function renderWaste() {
-  return `
-    <div class="topbar"><div class="topbar-inner"><div class="topbar-title">報廢記錄</div></div></div>
-    <div class="content">
-      <div class="section-title">新增報廢</div>
-      <div class="card" style="padding:16px;display:flex;flex-direction:column;gap:12px">
-        <div style="display:flex;gap:8px">
-          <button id="waste-type-tea" class="waste-type-btn active" onclick="setWasteType('茶品')">茶品</button>
-          <button id="waste-type-ing" class="waste-type-btn" onclick="setWasteType('配料')">配料</button>
-        </div>
-        <div>
-          <div style="font-size:13px;color:#8e8e93;margin-bottom:6px">品項</div>
-          <select id="waste-item" style="width:100%;padding:10px;border-radius:10px;border:1px solid #e5e5ea;font-size:15px;background:#fff">
-            ${[...state.items.rotatingAll,...state.items.fixed].map(i=>`<option value="${i.name}">${i.name}</option>`).join('')}
-          </select>
-        </div>
-        <div id="waste-qty-row">
-          <div style="font-size:13px;color:#8e8e93;margin-bottom:6px">數量（杯）</div>
-          <input id="waste-qty" type="tel" min="1" value="1" style="width:80px;padding:10px;border-radius:10px;border:1px solid #e5e5ea;font-size:15px;text-align:center">
-        </div>
-        <div>
-          <div style="font-size:13px;color:#8e8e93;margin-bottom:6px">報廢原因</div>
-          <input id="waste-reason" type="text" placeholder="例：過期、品質異常…" style="width:100%;padding:10px;border-radius:10px;border:1px solid #e5e5ea;font-size:15px;box-sizing:border-box">
-        </div>
-        <button class="btn-primary" onclick="submitWaste(this)">送出報廢</button>
-      </div>
-      <div class="section-title" style="margin-top:16px">歷史報廢紀錄</div>
-      <div id="waste-history"><div class="loading">載入中...</div></div>
-    </div>
-    ${renderNavbar('waste')}`;
-}
-
-let wasteType = '茶品';
-
-function initWasteType() { wasteType = '茶品'; }
-
-function setWasteType(type) {
-  wasteType = type;
-  const { rotatingAll, fixed } = state.items;
-  const items = type === '茶品'
-    ? [...rotatingAll, ...fixed]
-    : INGREDIENTS.map(n => ({ name: n }));
-  document.getElementById('waste-item').innerHTML = items.map(i => `<option value="${i.name}">${i.name}</option>`).join('');
-  document.getElementById('waste-type-tea').classList.toggle('active', type === '茶品');
-  document.getElementById('waste-type-ing').classList.toggle('active', type === '配料');
-}
-
-async function submitWaste(btn) {
-  const item   = document.getElementById('waste-item')?.value;
-  const qty    = Number(document.getElementById('waste-qty')?.value) || 1;
-  const reason = document.getElementById('waste-reason')?.value.trim();
-  if (!item) return;
-  btn.disabled = true; btn.textContent = '送出中...';
-  const res = await apiPost({ action: 'addWaste', cat: wasteType, name: item, qty, reason });
-  if (res.ok) {
-    state.wasteCache = null;
-    showToast('報廢記錄已送出 ✓');
-    document.getElementById('waste-reason').value = '';
-    document.getElementById('waste-qty').value = '1';
-    loadWasteHistory();
-  } else {
-    showToast('送出失敗：' + (res.error || ''));
-  }
-  btn.disabled = false; btn.textContent = '送出報廢';
-}
-
-function renderWasteRecords(records) {
-  const el = document.getElementById('waste-history');
-  if (!el) return;
-  if (!records.length) { el.innerHTML = '<div class="loading">尚無報廢紀錄</div>'; return; }
-  const catColor = { '茶品':'#007aff', '配料':'#ff9500' };
-  el.innerHTML = `<div class="card" style="padding:0 16px">${records.map(r => `
-    <div class="hist-row">
-      <div style="flex:1">
-        <div style="font-size:15px;font-weight:500">${r.name}
-          <span style="font-size:12px;color:${catColor[r.cat]||'#8e8e93'};margin-left:4px">${r.cat}</span>
-          <span style="font-size:13px;color:#3c3c43;margin-left:4px">${r.qty} 杯</span>
-        </div>
-        <div style="font-size:12px;color:#8e8e93;margin-top:2px">
-          ${r.datetime||r.date}${r.reason?' ・ '+r.reason:''}
-        </div>
-      </div>
-    </div>`).join('')}</div>`;
-}
-
-async function loadWasteHistory() {
-  if (state.wasteCache) { renderWasteRecords(state.wasteCache); return; }
-  const res = await apiGet('getWasteHistory');
-  state.wasteCache = res.records || [];
-  renderWasteRecords(state.wasteCache);
-}
-
-// ── Render ────────────────────────────────────
-function render() {
-  const app = document.getElementById('app');
-  if (!state.loaded) {
-    app.innerHTML = '<div class="loading" style="padding-top:120px">載入中...</div>';
-    return;
-  }
-  const s = state.screen;
-  if      (s === 'home')       app.innerHTML = renderHome();
-  else if (s === 'inventory')  app.innerHTML = renderInventory();
-  else if (s === 'order')      app.innerHTML = renderOrder();
-  else if (s === 'ordersheet') app.innerHTML = renderOrderSheet();
-  else if (s === 'arrival')    app.innerHTML = renderArrival();
-  else if (s === 'history')  { app.innerHTML = renderHistory(); loadHistory(); }
-  else if (s === 'waste')    { initWasteType(); app.innerHTML = renderWaste(); loadWasteHistory(); }
-  else if (s === 'stats')  { app.innerHTML = renderStats(); loadStats(); }
-  else if (s === 'settings')   app.innerHTML = renderSettings();
-}
-
-loadAll();
-
-// 每 60 秒背景刷新首頁資料，讓多人操作時數字保持同步
-setInterval(async () => {
-  if (state.screen !== 'home') return;
+  btn.disabled = true;
+  btn.textContent = '處理中…';
   try {
-    const daily = await apiGet('getDailyData', { date: todayStr() });
-    if (daily.error) return;
-    applyDaily(daily);
-    saveCache(daily);
-    render();
-  } catch(e) {}
-}, 15000);
+    const res = await apiPost({ action: 'closeStall', date: todayStr(), items });
+    if (res.ok) {
+      await refreshStall();
+      toast('收攤完成');
+      go('summary');
+    } else { toast(res.error || '操作失敗'); }
+  } catch(e) { toast('網路錯誤，請重試'); }
+  btn.disabled = false;
+  btn.textContent = '確認收攤';
+}
+
+/* ============================================================
+   SUMMARY
+   ============================================================ */
+function renderSummary() {
+  const s = state.stall;
+  if (!s || !s.found) {
+    return `<div class="header"><h1>今日明細</h1></div><div class="loading">無紀錄</div>`;
+  }
+
+  const { revenue, wasteCost, totalPrepared, totalWaste } = calcStall(s.items);
+  const totalCost = s.items.reduce((a, item) => a + item.prepared * item.cost, 0);
+  const profit = revenue - totalCost;
+
+  const rows = s.items.map(item => {
+    const sold = item.waste !== null ? item.prepared - item.waste : item.prepared;
+    return `
+    <tr>
+      <td>
+        <div>${item.name}</div>
+        ${item.sweetness ? `<div style="font-size:12px;color:#8e8e93">${item.sweetness}</div>` : ''}
+      </td>
+      <td class="num">${item.prepared}</td>
+      <td class="num">${sold}</td>
+      <td class="num">${item.waste !== null ? item.waste : '—'}</td>
+      <td class="num" style="color:#007AFF">${fmtMoney(sold * item.price)}</td>
+    </tr>`;
+  }).join('');
+
+  return `
+  <div class="header">
+    <div class="header-row">
+      <span class="back-btn" onclick="go('home')">
+        <svg width="10" height="16" viewBox="0 0 10 16" fill="none"><path d="M8 2L2 8l6 6" stroke="#007AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        返回
+      </span>
+      <h1>今日明細</h1>
+      <span style="width:48px"></span>
+    </div>
+    <div class="header-sub">${fmtDate(s.date)} · ${s.location}</div>
+  </div>
+  <div class="section">
+    <div class="section-label">品項明細</div>
+    <div class="card" style="overflow-x:auto;padding:0 16px">
+      <table class="sum-table">
+        <thead><tr>
+          <th>品項</th><th class="num">備貨</th><th class="num">售出</th><th class="num">報廢</th><th class="num">小計</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-label">總計</div>
+    <div class="card" style="padding:14px 16px">
+      <div class="total-row"><span class="total-label">總備貨</span><span class="total-value">${totalPrepared} 杯</span></div>
+      <div class="total-row"><span class="total-label">總售出</span><span class="total-value">${totalPrepared - totalWaste} 杯</span></div>
+      <div class="total-row"><span class="total-label">總報廢</span><span class="total-value">${totalWaste} 杯</span></div>
+      <div class="total-row"><span class="total-label">營業額</span><span class="total-value blue">${fmtMoney(revenue)}</span></div>
+      <div class="total-row"><span class="total-label">報廢成本</span><span class="total-value red">${fmtMoney(wasteCost)}</span></div>
+      <div class="total-row"><span class="total-label">毛利（扣全成本）</span><span class="total-value ${profit >= 0 ? 'green' : 'red'}">${fmtMoney(profit)}</span></div>
+    </div>
+  </div>`;
+}
+
+/* ============================================================
+   HISTORY
+   ============================================================ */
+function renderHistory() {
+  const records = state.historyData;
+  const f = state.histFilter;
+
+  return `
+  <div class="header"><h1>歷史紀錄</h1></div>
+  <div class="section">
+    <div class="section-label">日期區間</div>
+    <div class="card" style="padding:14px 16px">
+      <div class="filter-row">
+        <input type="date" id="hist_start" value="${f.start}">
+        <span>至</span>
+        <input type="date" id="hist_end" value="${f.end}">
+      </div>
+      <button class="btn btn-primary" style="margin-top:10px" onclick="loadHistory(this)">查詢</button>
+    </div>
+  </div>
+  ${records === null
+    ? '<div class="section"><div class="card"><div style="padding:20px;text-align:center;color:#8e8e93;font-size:14px">請選擇日期區間後查詢</div></div></div>'
+    : records.length === 0
+      ? '<div class="section"><div class="empty-state"><div class="icon">📋</div><p>該區間無出攤紀錄</p></div></div>'
+      : renderHistoryList(records)}`;
+}
+
+function renderHistoryList(records) {
+  const closed = records.filter(r => r.status === '已收攤');
+  const totalRevenue   = closed.reduce((a, r) => a + r.revenue, 0);
+  const totalWasteCost = closed.reduce((a, r) => a + r.wasteCost, 0);
+
+  const items = records.map((rec, ri) => {
+    const itemRows = rec.items.map(item => {
+      const sold = item.waste !== null ? item.prepared - item.waste : null;
+      return `<tr>
+        <td>${item.name}${item.sweetness ? ` <span style="color:#8e8e93;font-size:12px">${item.sweetness}</span>` : ''}</td>
+        <td class="num">${item.prepared}</td>
+        <td class="num">${sold !== null ? sold : '—'}</td>
+        <td class="num">${item.waste !== null ? item.waste : '—'}</td>
+        <td class="num" style="color:#007AFF">${sold !== null ? fmtMoney(sold * item.price) : '—'}</td>
+      </tr>`;
+    }).join('');
+
+    return `
+    <div class="hist-item">
+      <div class="hist-header" onclick="toggleHist(${ri})">
+        <div style="flex:1">
+          <div class="hist-date">${fmtDate(rec.date)}</div>
+          <div class="hist-meta">${rec.location} · 備貨 ${rec.totalPrepared} 杯</div>
+        </div>
+        <div style="text-align:right;margin-right:8px">
+          ${rec.status === '已收攤'
+            ? `<div class="hist-revenue">${fmtMoney(rec.revenue)}</div>
+               <div style="font-size:12px;color:#ff3b30">報廢 ${fmtMoney(rec.wasteCost)}</div>`
+            : `<span class="status-badge status-open" style="font-size:11px">開攤中</span>`}
+        </div>
+        <svg class="hist-chevron" id="chev_${ri}" width="8" height="14" viewBox="0 0 8 14" fill="none"><path d="M1 1l6 6-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="hist-detail" id="hist_detail_${ri}">
+        <div style="margin-top:10px;overflow-x:auto">
+          <table class="sum-table">
+            <thead><tr><th>品項</th><th class="num">備</th><th class="num">售</th><th class="num">廢</th><th class="num">小計</th></tr></thead>
+            <tbody>${itemRows}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `
+  <div class="section">
+    <div class="section-label">區間合計</div>
+    <div class="card" style="padding:14px 16px">
+      <div class="total-row"><span class="total-label">總營業額</span><span class="total-value blue">${fmtMoney(totalRevenue)}</span></div>
+      <div class="total-row"><span class="total-label">總報廢成本</span><span class="total-value red">${fmtMoney(totalWasteCost)}</span></div>
+      <div class="total-row"><span class="total-label">出攤次數</span><span class="total-value">${records.length} 次</span></div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-label">出攤紀錄</div>
+    ${items}
+  </div>`;
+}
+
+async function loadHistory(btn) {
+  const start = document.getElementById('hist_start').value.replace(/-/g, '');
+  const end   = document.getElementById('hist_end').value.replace(/-/g, '');
+  state.histFilter = {
+    start: document.getElementById('hist_start').value,
+    end:   document.getElementById('hist_end').value
+  };
+  btn.disabled = true;
+  btn.textContent = '查詢中…';
+  try {
+    const res = await apiGet('getHistory', { startDate: start, endDate: end });
+    state.historyData = res.records || [];
+  } catch(e) { toast('查詢失敗'); }
+  btn.disabled = false;
+  btn.textContent = '查詢';
+  render();
+}
+
+function toggleHist(idx) {
+  const det  = document.getElementById(`hist_detail_${idx}`);
+  const chev = document.getElementById(`chev_${idx}`);
+  det.classList.toggle('open');
+  chev.classList.toggle('open');
+}
+
+/* ============================================================
+   SETTINGS
+   ============================================================ */
+function renderSettings() {
+  const itemRows = state.items.map(item => `
+    <div class="settings-item">
+      <div class="settings-item-info">
+        <div class="settings-item-name">${item.name}</div>
+        <div class="settings-item-sub">售 ${fmtMoney(item.price)} · 成本 ${fmtMoney(item.cost)}${item.sweetnesses.length > 0 ? ` · ${item.sweetnesses.join('、')}` : ''}</div>
+      </div>
+      <div class="settings-item-actions">
+        <button class="btn btn-secondary btn-sm" onclick="editItem(${JSON.stringify(item.name)})">編輯</button>
+        <button class="btn btn-danger btn-sm" onclick="confirmDeleteItem(${JSON.stringify(item.name)})">刪除</button>
+      </div>
+    </div>`).join('');
+
+  const locRows = state.locations.map(loc => `
+    <div class="settings-item">
+      <div class="settings-item-info"><div class="settings-item-name">${loc}</div></div>
+      <div class="settings-item-actions">
+        <button class="btn btn-danger btn-sm" onclick="confirmDeleteLocation(${JSON.stringify(loc)})">刪除</button>
+      </div>
+    </div>`).join('');
+
+  return `
+  <div class="header"><h1>設定</h1></div>
+  <div class="section">
+    <div class="section-label">品項管理</div>
+    <div class="card">
+      ${itemRows || '<div style="padding:16px;color:#8e8e93;font-size:14px;text-align:center">尚無品項</div>'}
+    </div>
+    <button class="btn btn-primary" onclick="state.editItemOriginal=null;go('edit-item')">+ 新增品項</button>
+  </div>
+  <div class="section">
+    <div class="section-label">地點管理</div>
+    <div class="card">
+      ${locRows || '<div style="padding:16px;color:#8e8e93;font-size:14px;text-align:center">尚無地點</div>'}
+    </div>
+    <button class="btn btn-primary" onclick="go('add-location')">+ 新增地點</button>
+  </div>`;
+}
+
+/* ============================================================
+   EDIT ITEM
+   ============================================================ */
+function renderEditItem() {
+  const orig = state.editItemOriginal;
+  const item = orig ? state.items.find(i => i.name === orig) : null;
+  window._editSweets = item ? [...item.sweetnesses] : [];
+
+  const tagsHtml = () => window._editSweets.map(s =>
+    `<div class="tag">${s}<span class="tag-del" onclick="removeSweet(${JSON.stringify(s)})">×</span></div>`
+  ).join('');
+
+  return `
+  <div class="header">
+    <div class="header-row">
+      <span class="back-btn" onclick="go('settings')">
+        <svg width="10" height="16" viewBox="0 0 10 16" fill="none"><path d="M8 2L2 8l6 6" stroke="#007AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        返回
+      </span>
+      <h1>${item ? '編輯品項' : '新增品項'}</h1>
+      <span style="width:48px"></span>
+    </div>
+  </div>
+  <div class="section">
+    <div class="card" style="padding:14px 16px">
+      <div class="form-label">品項名稱</div>
+      <input type="text" id="item_name" value="${item ? item.name : ''}" placeholder="例：仙草奶茶">
+      <div class="form-label">售價（元）</div>
+      <input type="tel" id="item_price" value="${item ? item.price : ''}" placeholder="例：55">
+      <div class="form-label">成本價（元）</div>
+      <input type="tel" id="item_cost" value="${item ? item.cost : ''}" placeholder="例：20">
+      <div class="form-label" style="margin-top:16px">甜度選項（選填）</div>
+      <div id="sweet_tags" class="tags" style="min-height:32px">${tagsHtml()}</div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <input type="text" id="sweet_input" placeholder="輸入甜度名稱" style="flex:1">
+        <button class="btn btn-secondary btn-sm" style="flex-shrink:0" onclick="addSweet()">加入</button>
+      </div>
+    </div>
+    <button class="btn btn-primary" id="saveItemBtn" onclick="saveItemAction(this)">儲存品項</button>
+  </div>`;
+}
+
+function addSweet() {
+  const inp = document.getElementById('sweet_input');
+  const val = inp.value.trim();
+  if (!val) return;
+  if (window._editSweets.includes(val)) { toast('已存在'); return; }
+  window._editSweets.push(val);
+  inp.value = '';
+  document.getElementById('sweet_tags').innerHTML = window._editSweets.map(s =>
+    `<div class="tag">${s}<span class="tag-del" onclick="removeSweet(${JSON.stringify(s)})">×</span></div>`
+  ).join('');
+}
+
+function removeSweet(s) {
+  window._editSweets = window._editSweets.filter(x => x !== s);
+  document.getElementById('sweet_tags').innerHTML = window._editSweets.map(sv =>
+    `<div class="tag">${sv}<span class="tag-del" onclick="removeSweet(${JSON.stringify(sv)})">×</span></div>`
+  ).join('');
+}
+
+async function saveItemAction(btn) {
+  const name  = document.getElementById('item_name').value.trim();
+  const price = parseFloat(document.getElementById('item_price').value) || 0;
+  const cost  = parseFloat(document.getElementById('item_cost').value) || 0;
+  if (!name) { toast('請輸入品項名稱'); return; }
+
+  btn.disabled = true;
+  btn.textContent = '儲存中…';
+  try {
+    const res = await apiPost({ action: 'saveItem', originalName: state.editItemOriginal || name, name, price, cost, sweetnesses: window._editSweets || [] });
+    if (res.ok) {
+      const itemsRes = await apiGet('getItems');
+      state.items = itemsRes.items || [];
+      toast('已儲存');
+      go('settings');
+    } else { toast(res.error || '儲存失敗'); }
+  } catch(e) { toast('網路錯誤'); }
+  btn.disabled = false;
+  btn.textContent = '儲存品項';
+}
+
+function editItem(name) {
+  state.editItemOriginal = name;
+  go('edit-item');
+}
+
+async function confirmDeleteItem(name) {
+  if (!confirm(`確定刪除「${name}」？`)) return;
+  try {
+    const res = await apiPost({ action: 'deleteItem', name });
+    if (res.ok) {
+      state.items = (await apiGet('getItems')).items || [];
+      toast('已刪除');
+      render();
+    } else { toast(res.error || '刪除失敗'); }
+  } catch(e) { toast('網路錯誤'); }
+}
+
+/* ============================================================
+   ADD LOCATION
+   ============================================================ */
+function renderAddLocation() {
+  return `
+  <div class="header">
+    <div class="header-row">
+      <span class="back-btn" onclick="go('settings')">
+        <svg width="10" height="16" viewBox="0 0 10 16" fill="none"><path d="M8 2L2 8l6 6" stroke="#007AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        返回
+      </span>
+      <h1>新增地點</h1>
+      <span style="width:48px"></span>
+    </div>
+  </div>
+  <div class="section">
+    <div class="card" style="padding:14px 16px">
+      <div class="form-label">地點名稱</div>
+      <input type="text" id="loc_name" placeholder="例：台中中友百貨">
+    </div>
+    <button class="btn btn-primary" id="saveLocBtn" onclick="saveLocationAction(this)">新增地點</button>
+  </div>`;
+}
+
+async function saveLocationAction(btn) {
+  const name = document.getElementById('loc_name').value.trim();
+  if (!name) { toast('請輸入地點名稱'); return; }
+  btn.disabled = true;
+  btn.textContent = '儲存中…';
+  try {
+    const res = await apiPost({ action: 'saveLocation', name });
+    if (res.ok) {
+      state.locations = (await apiGet('getLocations')).locations || [];
+      toast('已新增');
+      go('settings');
+    } else { toast(res.error || '新增失敗'); }
+  } catch(e) { toast('網路錯誤'); }
+  btn.disabled = false;
+  btn.textContent = '新增地點';
+}
+
+async function confirmDeleteLocation(name) {
+  if (!confirm(`確定刪除「${name}」？`)) return;
+  try {
+    const res = await apiPost({ action: 'deleteLocation', name });
+    if (res.ok) {
+      state.locations = (await apiGet('getLocations')).locations || [];
+      toast('已刪除');
+      render();
+    } else { toast(res.error || '刪除失敗'); }
+  } catch(e) { toast('網路錯誤'); }
+}
+
+/* ---- Attach handlers ---- */
+function attachHandlers() {
+  const si = document.getElementById('sweet_input');
+  if (si) si.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addSweet(); } });
+}
+
+/* ---- Init ---- */
+loadAll();
 </script>
 </body>
 </html>
