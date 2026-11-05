@@ -143,13 +143,22 @@ function saveItem(data) {
   const rows = sheet.getLastRow() > 1 ? sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getValues() : [];
   const searchName = data.originalName || data.name;
   const idx = rows.findIndex(r => toStr(r[0]) === searchName);
+  if (data.name !== searchName && rows.some(r => toStr(r[0]) === data.name)) return respond({ error: '已有同名品項' });
   const row = [data.name, Number(data.price) || 0, Number(data.cost) || 0, (data.sweetnesses || []).join(',')];
   if (idx >= 0) {
     sheet.getRange(idx + 2, 1, 1, 4).setValues([row]);
+    if (data.name !== searchName) renameInRecords(searchName, data.name);
   } else {
     sheet.appendRow(row);
   }
   return respond({ ok: true });
+}
+
+function renameInRecords(oldName, newName) {
+  const rec = SS.getSheetByName('出攤紀錄');
+  if (!rec || rec.getLastRow() <= 1) return;
+  const range = rec.getRange(2, 3, rec.getLastRow() - 1, 1);
+  range.setValues(range.getValues().map(r => [toStr(r[0]) === oldName ? newName : r[0]]));
 }
 
 function deleteItem(data) {

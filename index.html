@@ -234,6 +234,7 @@ function addDays(s, n) { const d = parse8(s); d.setDate(d.getDate() + n); return
 function dash(s) { return `${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}`; }
 function fmtLong(s) { return `${+s.slice(4,6)}月${+s.slice(6,8)}日 週${WD[parse8(s).getDay()]}`; }
 function fmtShort(s) { return `${+s.slice(4,6)}/${+s.slice(6,8)}`; }
+function fmtShortY(s) { return (s.slice(0,4) === String(new Date().getFullYear()) ? '' : s.slice(2,4) + '/') + fmtShort(s); }
 function money(n) { return (n < 0 ? '-$' : '$') + Math.abs(Math.round(n)).toLocaleString(); }
 
 function toast(msg) {
@@ -727,7 +728,7 @@ function barChart(sessions) {
     const showDate = data.length <= 10 || i % 2 === (data.length - 1) % 2;
     return `<rect class="bar ${i === data.length - 1 ? 'latest' : ''}" x="${x}" y="${y}" width="${bw}" height="${h}" rx="3"/>
       <text class="chart-txt" x="${cx}" y="${y - 4}" text-anchor="middle">${val}</text>
-      ${showDate ? `<text class="chart-txt" x="${cx}" y="${H - 8}" text-anchor="middle">${fmtShort(r.date)}</text>` : ''}`;
+      ${showDate ? `<text class="chart-txt" x="${cx}" y="${H - 8}" text-anchor="middle">${fmtShortY(r.date)}</text>` : ''}`;
   }).join('');
   return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="每場營業額長條圖">
     <line class="chart-base" x1="${padX}" x2="${W - padX}" y1="${top + chartH}" y2="${top + chartH}"/>${bars}</svg>`;
@@ -794,7 +795,7 @@ function renderSessionList(recs) {
     const prepared = r.items.reduce((a, i) => a + i.prepared, 0);
     return `<div class="srow" onclick="openSession('${r.date}')">
       <div class="srow-main">
-        <div class="srow-date">${fmtShort(r.date)} 週${WD[parse8(r.date).getDay()]}</div>
+        <div class="srow-date">${fmtShortY(r.date)} 週${WD[parse8(r.date).getDay()]}</div>
         <div class="srow-meta">${esc(r.location)} · ${done ? `賣 ${c.sold} / 備 ${c.prepared} 杯` : `備貨 ${prepared} 杯`}</div>
       </div>
       ${done
@@ -819,7 +820,7 @@ function renderItemList(recs) {
         const has = r.waste !== null;
         const sub = [esc(r.location), r.sweetness ? esc(r.sweetness) : ''].filter(Boolean).join(' · ');
         return `<div class="prow">
-          <div>${fmtShort(r.date)}<small>${sub}</small></div>
+          <div>${fmtShortY(r.date)}<small>${sub}</small></div>
           <span class="n">${r.prepared}</span>
           <span class="n strong">${has ? r.prepared - r.waste : '—'}</span>
           <span class="n ${has && r.waste > 0 ? 'waste' : ''}">${has ? r.waste : '—'}</span>
@@ -922,6 +923,7 @@ async function saveItemAction(btn) {
   const price = parseFloat(document.getElementById('item_price').value) || 0;
   const cost  = parseFloat(document.getElementById('item_cost').value) || 0;
   if (!name) { toast('請輸入品項名稱'); return; }
+  if (name !== state.editItemOriginal && state.items.some(i => i.name === name)) { toast('已有同名品項'); return; }
   btn.disabled = true;
   btn.textContent = '儲存中…';
   try {
