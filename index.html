@@ -2,168 +2,197 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#f1efe6">
   <title>出攤管理</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #f0f0f5;
-      --card: #ffffff;
-      --border: rgba(0,0,0,0.08);
-      --text: #111827;
-      --text2: #6b7280;
-      --text3: #9ca3af;
-      --blue: #4f7cff;
-      --blue-light: #eef2ff;
-      --green: #22c55e;
-      --green-light: #f0fdf4;
-      --red: #ef4444;
-      --red-light: #fef2f2;
-      --orange: #f97316;
-      --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-      --shadow: 0 4px 12px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.04);
+      --bg: #f1efe6;
+      --surface: #faf9f3;
+      --surface2: #ebe8dc;
+      --ink: #272b22;
+      --ink2: #62675a;
+      --ink3: #92978a;
+      --line: rgba(39,43,34,0.11);
+      --accent: #47663a;
+      --accent-soft: #dfe8d2;
+      --accent-ink: #ffffff;
+      --hero: #3b5530;
+      --hero-ink: #f4f1e4;
+      --waste: #a8502b;
+      --waste-soft: #f3e1d8;
+      --shadow: 0 1px 2px rgba(39,43,34,0.05), 0 4px 14px rgba(39,43,34,0.05);
+      --serif: 'Noto Serif TC', 'Songti TC', serif;
+      --sans: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, 'PingFang TC', sans-serif;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #171a14;
+        --surface: #21251d;
+        --surface2: #2b3025;
+        --ink: #ebe8da;
+        --ink2: #a5aa98;
+        --ink3: #767b6b;
+        --line: rgba(235,232,218,0.12);
+        --accent: #9bbd84;
+        --accent-soft: #2c3926;
+        --accent-ink: #14210f;
+        --hero: #2d4125;
+        --hero-ink: #ecebd9;
+        --waste: #e19a78;
+        --waste-soft: #3a2a22;
+        --shadow: 0 1px 2px rgba(0,0,0,0.3);
+      }
     }
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding-bottom: 88px; }
+    html { background: var(--bg); }
+    body { font-family: var(--sans); background: var(--bg); color: var(--ink); min-height: 100vh; padding-bottom: calc(92px + env(safe-area-inset-bottom)); font-size: 15px; line-height: 1.45; }
+    button { font-family: inherit; }
 
     /* NAV */
-    .nav { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255,255,255,0.92); border-top: 1px solid var(--border); backdrop-filter: blur(20px) saturate(180%); display: flex; z-index: 100; padding-bottom: env(safe-area-inset-bottom); }
-    .nav-tab { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 10px 0 7px; gap: 3px; font-size: 10px; font-weight: 500; color: var(--text3); cursor: pointer; transition: color 0.15s; }
-    .nav-tab.active { color: var(--blue); }
+    .nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface); border-top: 1px solid var(--line); display: flex; z-index: 100; padding-bottom: env(safe-area-inset-bottom); }
+    .nav-tab { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 10px 0 8px; gap: 3px; font-size: 11px; font-weight: 500; color: var(--ink3); cursor: pointer; }
     .nav-tab svg { width: 22px; height: 22px; }
-    .nav-tab.active svg { stroke: var(--blue); }
+    .nav-tab.active { color: var(--accent); font-weight: 700; }
 
     /* HEADER */
-    .header { background: rgba(255,255,255,0.92); backdrop-filter: blur(20px) saturate(180%); border-bottom: 1px solid var(--border); padding: 14px 20px 12px; position: sticky; top: 0; z-index: 50; }
-    .header h1 { font-size: 17px; font-weight: 700; text-align: center; letter-spacing: -0.3px; }
-    .header-sub { font-size: 12px; color: var(--text2); text-align: center; margin-top: 2px; }
+    .header { background: var(--bg); padding: 16px 20px 10px; position: sticky; top: 0; z-index: 50; }
+    .header h1 { font-family: var(--serif); font-size: 19px; font-weight: 700; text-align: center; }
+    .header-sub { font-size: 12px; color: var(--ink2); text-align: center; margin-top: 2px; }
     .header-row { display: flex; align-items: center; justify-content: space-between; }
-    .back-btn { font-size: 15px; color: var(--blue); font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+    .back-btn { font-size: 15px; color: var(--accent); font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 4px; min-width: 56px; }
 
-    /* HERO CARD (home screen) */
-    .hero-card { background: linear-gradient(135deg, #4f7cff 0%, #7c3aed 100%); border-radius: 20px; padding: 24px 20px; color: #fff; margin: 16px 16px 0; box-shadow: 0 8px 24px rgba(79,124,255,0.35); }
-    .hero-label { font-size: 12px; font-weight: 600; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
-    .hero-title { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
-    .hero-sub { font-size: 14px; opacity: 0.8; margin-top: 4px; }
-    .hero-badge { display: inline-flex; align-items: center; gap: 5px; background: rgba(255,255,255,0.22); backdrop-filter: blur(4px); border-radius: 20px; padding: 4px 12px; font-size: 12px; font-weight: 600; margin-top: 12px; }
-    .hero-dot { width: 6px; height: 6px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 6px #4ade80; }
+    /* DATE NAV */
+    .datenav { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .icon-btn { width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+    .icon-btn:active { background: var(--surface2); }
+    .datepick { position: relative; flex: 1; text-align: center; cursor: pointer; padding: 2px 0; }
+    .dp-main { font-family: var(--serif); font-size: 19px; font-weight: 700; display: block; }
+    .dp-sub { font-size: 12px; color: var(--ink2); display: block; margin-top: 1px; }
+    .datepick input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; padding: 0; }
+    .today-link { display: block; margin: 6px auto 0; font-size: 12px; font-weight: 500; color: var(--accent); background: none; border: none; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 
-    /* STAT GRID */
-    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 16px 0; }
-    .stat-card { background: var(--card); border-radius: 16px; padding: 16px; box-shadow: var(--shadow-sm); }
-    .stat-card-label { font-size: 12px; font-weight: 500; color: var(--text2); margin-bottom: 6px; }
-    .stat-card-value { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; font-variant-numeric: tabular-nums; }
-    .stat-card-value.blue { color: var(--blue); }
-    .stat-card-value.green { color: var(--green); }
-    .stat-card-value.red { color: var(--red); }
-    .stat-card-value.orange { color: var(--orange); }
-    .stat-card-sub { font-size: 11px; color: var(--text3); margin-top: 3px; }
+    /* HERO */
+    .hero { background: var(--hero); color: var(--hero-ink); border-radius: 18px; padding: 22px 20px; margin: 8px 16px 0; }
+    .hero-label { font-size: 13px; opacity: 0.8; margin-bottom: 4px; }
+    .hero-title { font-family: var(--serif); font-size: 38px; font-weight: 700; line-height: 1.15; font-variant-numeric: tabular-nums; }
+    .hero-sub { font-size: 13px; opacity: 0.8; margin-top: 6px; }
+    .pill { display: inline-block; background: rgba(255,255,255,0.16); border-radius: 999px; padding: 3px 11px; font-size: 12px; font-weight: 500; margin-top: 12px; }
 
-    /* SECTION */
+    /* STATS */
+    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 16px 0; }
+    .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+    .stat-label { font-size: 12px; color: var(--ink2); margin-bottom: 4px; }
+    .stat-value { font-family: var(--serif); font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .stat-value.good { color: var(--accent); }
+    .stat-value.bad { color: var(--waste); }
+    .stat-sub { font-size: 11px; color: var(--ink3); margin-top: 2px; }
+
+    /* SECTION / CARD */
     .section { margin: 16px 16px 0; }
-    .section-label { font-size: 12px; color: var(--text2); font-weight: 600; padding: 0 2px 7px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .section-label { font-size: 12px; color: var(--ink2); font-weight: 700; padding: 0 2px 7px; letter-spacing: 0.06em; }
+    .card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
 
-    /* CARD */
-    .card { background: var(--card); border-radius: 16px; overflow: hidden; box-shadow: var(--shadow-sm); }
-    .card-row { padding: 13px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
-    .card-row:last-child { border-bottom: none; }
-    .card-row-label { font-size: 15px; flex: 1; font-weight: 500; }
-    .card-row-value { font-size: 15px; color: var(--text2); }
+    /* ITEM ROWS */
+    .irow { display: grid; grid-template-columns: 1fr 46px 46px 46px; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--line); gap: 4px; }
+    .irow:last-child { border-bottom: none; }
+    .ihead { font-size: 11px; color: var(--ink3); font-weight: 500; padding: 9px 16px; background: var(--surface2); }
+    .ihead span:not(:first-child), .irow .n { text-align: right; font-variant-numeric: tabular-nums; }
+    .iname { font-weight: 500; }
+    .iname small { display: block; font-size: 12px; color: var(--ink3); font-weight: 400; margin-top: 1px; }
+    .irow .strong { font-weight: 700; }
+    .irow .waste { color: var(--waste); font-weight: 700; }
 
     /* BUTTONS */
-    .btn { width: 100%; padding: 15px; border-radius: 14px; border: none; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 10px; transition: transform 0.1s, opacity 0.1s; letter-spacing: -0.2px; }
-    .btn:active { transform: scale(0.98); opacity: 0.85; }
-    .btn-primary { background: linear-gradient(135deg, #4f7cff, #6366f1); color: #fff; box-shadow: 0 4px 12px rgba(79,124,255,0.35); }
-    .btn-success { background: linear-gradient(135deg, #22c55e, #16a34a); color: #fff; box-shadow: 0 4px 12px rgba(34,197,94,0.3); }
-    .btn-danger { background: #ef4444; color: #fff; }
-    .btn-secondary { background: #f3f4f6; color: var(--text); }
-    .btn-sm { padding: 7px 14px; font-size: 13px; border-radius: 10px; width: auto; margin-top: 0; box-shadow: none; }
-    .btn-sm.btn-primary { background: var(--blue-light); color: var(--blue); box-shadow: none; }
-    .btn-sm.btn-danger { background: var(--red-light); color: var(--red); box-shadow: none; }
+    .btn { width: 100%; padding: 14px; border-radius: 12px; border: 1px solid transparent; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 10px; }
+    .btn:active { opacity: 0.8; }
+    .btn:disabled { opacity: 0.55; }
+    .btn-primary { background: var(--accent); color: var(--accent-ink); }
+    .btn-secondary { background: var(--surface); color: var(--ink); border-color: var(--line); }
+    .btn-danger { background: var(--waste-soft); color: var(--waste); }
+    .btn-sm { width: auto; margin-top: 0; padding: 7px 14px; font-size: 13px; border-radius: 10px; font-weight: 500; }
+    .btn-sm.btn-secondary { background: var(--surface2); border-color: transparent; }
 
     /* FORM */
-    .form-label { font-size: 12px; color: var(--text2); font-weight: 600; margin-bottom: 6px; margin-top: 18px; text-transform: uppercase; letter-spacing: 0.4px; }
-    input, select { width: 100%; padding: 13px 14px; border-radius: 12px; border: 1.5px solid #e5e7eb; font-size: 15px; background: #f9fafb; color: var(--text); appearance: none; -webkit-appearance: none; outline: none; font-family: inherit; transition: border-color 0.15s, background 0.15s; }
-    input:focus, select:focus { border-color: var(--blue); background: #fff; box-shadow: 0 0 0 3px rgba(79,124,255,0.12); }
-    select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px; }
+    .form-label { font-size: 12px; color: var(--ink2); font-weight: 700; margin: 16px 0 6px; letter-spacing: 0.04em; }
+    .form-label:first-child { margin-top: 0; }
+    input, select { width: 100%; padding: 12px 13px; border-radius: 10px; border: 1.5px solid var(--line); font-size: 16px; background: var(--bg); color: var(--ink); appearance: none; -webkit-appearance: none; outline: none; font-family: inherit; }
+    input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+    input::placeholder { color: var(--ink3); }
+    select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2392978a' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 13px center; padding-right: 34px; }
 
-    /* ITEM SLOT */
-    .item-slot { background: var(--card); border-radius: 16px; padding: 16px; margin-bottom: 10px; box-shadow: var(--shadow-sm); }
-    .slot-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-    .slot-num { width: 28px; height: 28px; background: linear-gradient(135deg, #4f7cff, #6366f1); color: #fff; border-radius: 8px; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .slot-title { font-size: 15px; font-weight: 600; flex: 1; color: var(--text2); }
+    .slot { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px 16px; margin-bottom: 10px; }
+    .slot-title { font-size: 13px; font-weight: 700; color: var(--ink2); margin-bottom: 10px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+    .slot-title em { font-style: normal; font-weight: 400; font-size: 12px; color: var(--ink3); }
     .slot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .slot-grid .full { grid-column: 1 / -1; }
-    .slot-grid label { font-size: 11px; color: var(--text2); font-weight: 600; display: block; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.4px; }
-    .slot-grid input, .slot-grid select { padding: 11px 13px; font-size: 15px; }
+    .slot-grid label { font-size: 12px; color: var(--ink2); display: block; margin-bottom: 5px; }
+    .preview { padding: 11px 13px; background: var(--accent-soft); color: var(--accent); border-radius: 10px; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .preview.over { background: var(--waste-soft); color: var(--waste); }
+    .hint { font-size: 12px; color: var(--ink3); margin: -2px 2px 10px; }
 
-    /* STALL STATUS */
-    .status-badge { display: inline-flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
-    .status-open { background: var(--green-light); color: #16a34a; }
-    .status-closed { background: var(--blue-light); color: #4338ca; }
-    .status-none { background: #f3f4f6; color: var(--text2); }
+    /* CHIPS / SEGMENT */
+    .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+    .chip { padding: 7px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: 13px; font-weight: 500; color: var(--ink2); cursor: pointer; }
+    .chip.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+    .seg { display: flex; background: var(--surface2); border-radius: 12px; padding: 3px; }
+    .seg button { flex: 1; padding: 9px 0; border: none; background: transparent; border-radius: 9px; font-size: 14px; font-weight: 500; color: var(--ink2); cursor: pointer; }
+    .seg button.on { background: var(--surface); color: var(--ink); font-weight: 700; box-shadow: var(--shadow); }
+    .filter-dates { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+    .filter-dates span { color: var(--ink3); font-size: 13px; }
 
-    /* SUMMARY TABLE */
-    .sum-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-    .sum-table th { color: var(--text2); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; padding: 8px 8px; text-align: left; border-bottom: 1px solid var(--border); }
-    .sum-table td { padding: 11px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
-    .sum-table tr:last-child td { border-bottom: none; }
-    .sum-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+    /* RECORDS */
+    .totals { display: grid; grid-template-columns: repeat(3, 1fr); }
+    .totals > div { padding: 14px 12px; text-align: center; border-right: 1px solid var(--line); }
+    .totals > div:last-child { border-right: none; }
+    .totals .stat-value { font-size: 18px; }
+    .chart-card { padding: 14px 12px 8px; }
+    .chart-title { font-size: 12px; color: var(--ink2); font-weight: 700; padding: 0 4px 6px; }
+    .chart-card svg { display: block; width: 100%; height: auto; }
+    .bar { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1; }
+    .bar.latest { fill: var(--accent); }
+    .chart-txt { font-size: 9px; fill: var(--ink2); font-family: var(--sans); }
+    .chart-base { stroke: var(--line); stroke-width: 1; }
+    .srow { display: flex; align-items: center; gap: 10px; padding: 13px 16px; border-bottom: 1px solid var(--line); cursor: pointer; }
+    .srow:last-child { border-bottom: none; }
+    .srow:active { background: var(--surface2); }
+    .srow-main { flex: 1; min-width: 0; }
+    .srow-date { font-weight: 700; }
+    .srow-meta { font-size: 12px; color: var(--ink3); margin-top: 1px; }
+    .srow-money { font-family: var(--serif); font-weight: 700; font-size: 17px; font-variant-numeric: tabular-nums; text-align: right; }
+    .srow-money small { display: block; font-family: var(--sans); font-weight: 400; font-size: 11px; color: var(--waste); }
+    .tag-open { font-size: 11px; font-weight: 700; background: var(--accent-soft); color: var(--accent); padding: 3px 10px; border-radius: 999px; }
+    .prow { display: grid; grid-template-columns: 1fr 40px 40px 40px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--line); gap: 4px; font-size: 14px; }
+    .prow:last-child { border-bottom: none; }
+    .prow .n { text-align: right; font-variant-numeric: tabular-nums; }
+    .prow .n.strong { font-weight: 700; }
+    .prow .n.waste { color: var(--waste); font-weight: 700; }
+    .prow small { display: block; font-size: 11px; color: var(--ink3); }
+    .pcard-head { display: flex; justify-content: space-between; align-items: baseline; padding: 13px 16px 11px; }
+    .pcard-head b { font-family: var(--serif); font-size: 17px; }
+    .pcard-head span { font-size: 12px; color: var(--ink3); }
 
-    /* TOTALS */
-    .total-row { display: flex; justify-content: space-between; align-items: center; padding: 11px 0; border-bottom: 1px solid var(--border); }
-    .total-row:last-child { border-bottom: none; }
-    .total-label { font-size: 15px; color: var(--text2); font-weight: 500; }
-    .total-value { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.3px; }
-    .total-value.green { color: var(--green); }
-    .total-value.red { color: var(--red); }
-    .total-value.blue { color: var(--blue); }
-
-    /* HISTORY */
-    .hist-item { background: var(--card); border-radius: 16px; margin-bottom: 10px; overflow: hidden; box-shadow: var(--shadow-sm); }
-    .hist-header { padding: 15px 16px; display: flex; align-items: center; gap: 10px; cursor: pointer; }
-    .hist-date { font-size: 16px; font-weight: 700; letter-spacing: -0.3px; flex: 1; }
-    .hist-meta { font-size: 12px; color: var(--text3); margin-top: 2px; }
-    .hist-revenue { font-size: 17px; font-weight: 700; color: var(--blue); font-variant-numeric: tabular-nums; }
-    .hist-detail { padding: 0 16px 14px; border-top: 1px solid var(--border); display: none; }
-    .hist-detail.open { display: block; }
-    .hist-chevron { color: var(--text3); transition: transform 0.2s; flex-shrink: 0; }
-    .hist-chevron.open { transform: rotate(90deg); }
-
-    /* DATE FILTER */
-    .filter-row { display: flex; gap: 8px; align-items: center; }
-    .filter-row input { flex: 1; }
-    .filter-row span { color: var(--text3); font-size: 13px; flex-shrink: 0; }
-
-    /* SETTINGS LIST */
-    .settings-item { display: flex; align-items: center; padding: 14px 16px; border-bottom: 1px solid var(--border); gap: 12px; }
+    /* SETTINGS */
+    .settings-item { display: flex; align-items: center; padding: 13px 16px; border-bottom: 1px solid var(--line); gap: 12px; }
     .settings-item:last-child { border-bottom: none; }
-    .settings-item-info { flex: 1; }
-    .settings-item-name { font-size: 16px; font-weight: 600; }
-    .settings-item-sub { font-size: 12px; color: var(--text2); margin-top: 3px; }
+    .settings-item-info { flex: 1; min-width: 0; }
+    .settings-item-name { font-weight: 700; }
+    .settings-item-sub { font-size: 12px; color: var(--ink2); margin-top: 2px; }
     .settings-item-actions { display: flex; gap: 8px; }
-
-    /* SWEETNESS TAGS */
     .tags { display: flex; flex-wrap: wrap; gap: 6px; }
-    .tag { background: var(--blue-light); color: var(--blue); padding: 5px 12px; border-radius: 20px; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 5px; }
-    .tag-del { cursor: pointer; color: var(--text3); font-size: 16px; line-height: 1; }
+    .tag { background: var(--accent-soft); color: var(--accent); padding: 5px 12px; border-radius: 999px; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 6px; }
+    .tag-del { cursor: pointer; font-size: 16px; line-height: 1; opacity: 0.7; }
 
-    /* PREVIEW BOX */
-    .preview-box { padding: 11px 13px; background: var(--green-light); border-radius: 12px; font-size: 15px; color: var(--green); font-weight: 600; border: 1.5px solid #bbf7d0; }
+    .loading, .empty { text-align: center; padding: 56px 24px; color: var(--ink3); font-size: 14px; }
+    .empty b { display: block; font-family: var(--serif); font-size: 18px; color: var(--ink); margin-bottom: 6px; }
+    .empty .btn { max-width: 260px; margin: 18px auto 0; }
 
-    /* LOADING / EMPTY */
-    .loading { text-align: center; padding: 60px 24px; color: var(--text3); font-size: 15px; }
-    .empty-state { text-align: center; padding: 56px 24px; color: var(--text3); }
-    .empty-state .icon { font-size: 44px; margin-bottom: 14px; }
-    .empty-state p { font-size: 15px; font-weight: 500; }
-
-    /* TOAST */
-    #toast { position: fixed; bottom: 104px; left: 50%; transform: translateX(-50%); background: rgba(17,24,39,0.88); color: #fff; padding: 11px 22px; border-radius: 24px; font-size: 14px; font-weight: 500; z-index: 999; opacity: 0; transition: opacity 0.25s; pointer-events: none; white-space: nowrap; backdrop-filter: blur(8px); }
+    #toast { position: fixed; bottom: calc(104px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 20px; border-radius: 999px; font-size: 14px; font-weight: 500; z-index: 999; opacity: 0; transition: opacity 0.25s; pointer-events: none; white-space: nowrap; }
     #toast.show { opacity: 1; }
-
-    /* DIVIDER */
-    .divider { height: 1px; background: var(--border); margin: 0; }
+    @media (prefers-reduced-motion: reduce) { #toast { transition: none; } }
   </style>
 </head>
 <body>
@@ -172,39 +201,46 @@
 
 <script>
 const API = 'https://script.google.com/macros/s/AKfycbyKrS_BEKBj7Y2ZGq6iz4996VXMAApjxsNwaHFysmmjzsDjWi_L8p7O4LwM-8yJP_w-FQ/exec';
+const SLOTS = 4;
+const WD = ['日','一','二','三','四','五','六'];
 
 const state = {
-  screen: 'home',
+  screen: 'session',
   items: [],
   locations: [],
-  stall: null,
   loaded: false,
-  historyData: null,
-  histFilter: { start: '', end: '' },
+  viewDate: '',
+  stall: null,
+  stallLoading: false,
+  records: null,
+  recLoading: false,
+  recRange: '90',
+  recCustom: { start: '', end: '' },
+  recLoc: '',
+  recView: 'sessions',
   editItemOriginal: null
 };
 
 /* ---- Utility ---- */
-function todayStr() {
-  const d = new Date();
-  return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
-
-function fmtDate(d8) {
-  if (!d8 || d8.length < 8) return d8 || '';
-  return `${d8.slice(0,4)}/${d8.slice(4,6)}/${d8.slice(6,8)}`;
-}
-
-function fmtMoney(n) {
-  return '$' + Number(n).toLocaleString();
-}
+function pad(n) { return String(n).padStart(2, '0'); }
+function fmt8(d) { return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`; }
+function parse8(s) { return new Date(+s.slice(0,4), +s.slice(4,6)-1, +s.slice(6,8), 12); }
+function todayStr() { return fmt8(new Date()); }
+function addDays(s, n) { const d = parse8(s); d.setDate(d.getDate() + n); return fmt8(d); }
+function dash(s) { return `${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}`; }
+function fmtLong(s) { return `${+s.slice(4,6)}月${+s.slice(6,8)}日 週${WD[parse8(s).getDay()]}`; }
+function fmtShort(s) { return `${+s.slice(4,6)}/${+s.slice(6,8)}`; }
+function money(n) { return (n < 0 ? '-$' : '$') + Math.abs(Math.round(n)).toLocaleString(); }
 
 function toast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.classList.add('show');
   clearTimeout(window._toastTimer);
-  window._toastTimer = setTimeout(() => t.classList.remove('show'), 2000);
+  window._toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
 }
 
 /* ---- API ---- */
@@ -213,7 +249,6 @@ async function apiGet(action, params = {}) {
   const res = await fetch(`${API}?${qs}`);
   return res.json();
 }
-
 async function apiPost(data) {
   const res = await fetch(API, { method: 'POST', body: JSON.stringify(data) });
   return res.json();
@@ -221,208 +256,244 @@ async function apiPost(data) {
 
 /* ---- Load ---- */
 async function loadAll() {
+  state.viewDate = todayStr();
   try {
     const [itemsRes, locsRes, stallRes] = await Promise.all([
       apiGet('getItems'),
       apiGet('getLocations'),
-      apiGet('getStallData', { date: todayStr() })
+      apiGet('getStallData', { date: state.viewDate })
     ]);
     state.items = itemsRes.items || [];
     state.locations = locsRes.locations || [];
     state.stall = stallRes;
-    state.loaded = true;
   } catch(e) {
-    state.loaded = true;
+    state.stall = { found: false, error: true };
     toast('載入失敗，請重試');
   }
+  state.loaded = true;
+  render();
+}
+
+async function loadStall() {
+  const date = state.viewDate;
+  state.stall = null;
+  state.stallLoading = true;
+  render();
+  try {
+    const res = await apiGet('getStallData', { date });
+    if (state.viewDate !== date) return;
+    state.stall = res;
+  } catch(e) {
+    if (state.viewDate !== date) return;
+    state.stall = { found: false, error: true };
+    toast('載入失敗');
+  }
+  state.stallLoading = false;
   render();
 }
 
 async function refreshStall() {
-  try {
-    const res = await apiGet('getStallData', { date: todayStr() });
-    state.stall = res;
-  } catch(e) {}
+  try { state.stall = await apiGet('getStallData', { date: state.viewDate }); } catch(e) {}
+  state.records = null;
 }
 
 /* ---- Navigation ---- */
 function go(screen) {
   state.screen = screen;
   window.scrollTo(0, 0);
+  if (screen === 'records' && state.records === null && !state.recLoading) { loadRecords(); return; }
   render();
 }
+
+function setViewDate(d8) {
+  if (!d8 || d8 === state.viewDate) return;
+  state.viewDate = d8;
+  loadStall();
+}
+function shiftDate(n) { setViewDate(addDays(state.viewDate, n)); }
+function pickDate(v) { if (v) setViewDate(v.replace(/-/g, '')); }
+function openSession(d8) { state.screen = 'session'; window.scrollTo(0, 0); state.viewDate = d8; loadStall(); }
 
 function render() {
   const app = document.getElementById('app');
   if (!state.loaded) { app.innerHTML = '<div class="loading">載入中…</div>'; return; }
-
-  let html = '';
-  if      (state.screen === 'home')         html = renderHome();
-  else if (state.screen === 'open-stall')   html = renderOpenStall();
-  else if (state.screen === 'close-stall')  html = renderCloseStall();
-  else if (state.screen === 'summary')      html = renderSummary();
-  else if (state.screen === 'history')      html = renderHistory();
-  else if (state.screen === 'settings')     html = renderSettings();
-  else if (state.screen === 'edit-item')    html = renderEditItem();
-  else if (state.screen === 'add-location') html = renderAddLocation();
-
-  html += renderNavbar();
-  app.innerHTML = html;
+  const views = {
+    'session': renderSession, 'open-stall': renderOpenStall, 'close-stall': renderCloseStall,
+    'records': renderRecords, 'settings': renderSettings, 'edit-item': renderEditItem, 'add-location': renderAddLocation
+  };
+  app.innerHTML = views[state.screen]() + renderNavbar();
   attachHandlers();
 }
 
+const BACK = `<svg width="10" height="16" viewBox="0 0 10 16" fill="none"><path d="M8 2L2 8l6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
 function renderNavbar() {
   const tabs = [
-    { id: 'home', label: '首頁', icon: '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>' },
-    { id: 'history', label: '歷史', icon: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>' },
-    { id: 'settings', label: '設定', icon: '<circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>' }
+    { id: 'session', label: '場次', icon: '<path d="M5 8h13v5a6 6 0 0 1-6 6h-1a6 6 0 0 1-6-6V8z"/><path d="M18 9h1.5a2.5 2.5 0 0 1 0 5H18"/><path d="M9 3v2M13 3v2"/>' },
+    { id: 'records', label: '紀錄', icon: '<path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/>' },
+    { id: 'settings', label: '設定', icon: '<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>' }
   ];
-  const active = ['home','open-stall','close-stall','summary'].includes(state.screen) ? 'home'
-               : state.screen === 'history' ? 'history' : 'settings';
+  const active = ['session','open-stall','close-stall'].includes(state.screen) ? 'session'
+               : state.screen === 'records' ? 'records' : 'settings';
   return `<nav class="nav">${tabs.map(t => `
     <div class="nav-tab ${active===t.id?'active':''}" onclick="go('${t.id}')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${t.icon}</svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${t.icon}</svg>
       <span>${t.label}</span>
     </div>`).join('')}</nav>`;
 }
 
-/* ============================================================
-   HOME
-   ============================================================ */
-function renderHome() {
-  const s = state.stall;
-  const today = fmtDate(todayStr());
+function calc(items) {
+  let revenue = 0, wasteCost = 0, prepared = 0, waste = 0, cost = 0;
+  items.forEach(it => {
+    if (it.waste !== null && it.waste !== undefined) {
+      revenue   += (it.prepared - it.waste) * it.price;
+      wasteCost += it.waste * it.cost;
+      cost      += it.prepared * it.cost;
+      prepared  += it.prepared;
+      waste     += it.waste;
+    }
+  });
+  return { revenue, wasteCost, prepared, waste, sold: prepared - waste, profit: revenue - cost };
+}
 
-  if (!s || !s.found) {
-    const canOpen = state.items.length > 0 && state.locations.length > 0;
-    return `
-    <div class="header"><h1>出攤管理</h1><div class="header-sub">${today}</div></div>
-    <div class="hero-card" style="background:linear-gradient(135deg,#6b7280 0%,#374151 100%);box-shadow:0 8px 24px rgba(107,114,128,0.3)">
-      <div class="hero-label">今日狀態</div>
-      <div class="hero-title">尚未開攤</div>
-      <div class="hero-sub">${canOpen ? '點下方按鈕開始今日出攤' : '請先到設定新增品項與地點'}</div>
+/* ============================================================
+   SESSION (場次)
+   ============================================================ */
+function renderSession() {
+  const d = state.viewDate;
+  const isToday = d === todayStr();
+  const header = `
+  <div class="header">
+    <div class="datenav">
+      <button class="icon-btn" onclick="shiftDate(-1)" aria-label="前一天">${BACK}</button>
+      <label class="datepick">
+        <span class="dp-main">${fmtLong(d)}</span>
+        <span class="dp-sub">${d.slice(0,4)}${isToday ? ' · 今天' : ''}</span>
+        <input type="date" value="${dash(d)}" onchange="pickDate(this.value)" aria-label="選擇日期">
+      </label>
+      <button class="icon-btn" onclick="shiftDate(1)" aria-label="後一天" style="transform:scaleX(-1)">${BACK}</button>
     </div>
-    <div class="section" style="margin-top:14px">
+    ${isToday ? '' : '<button class="today-link" onclick="setViewDate(todayStr())">回到今天</button>'}
+  </div>`;
+
+  const s = state.stall;
+  if (state.stallLoading || !s) return header + '<div class="loading">載入中…</div>';
+
+  if (s.error) {
+    return header + `<div class="empty"><b>載入失敗</b>請檢查網路後再試<button class="btn btn-secondary" onclick="loadStall()">重新載入</button></div>`;
+  }
+
+  if (!s.found) {
+    const canOpen = state.items.length > 0 && state.locations.length > 0;
+    return header + `
+    <div class="empty">
+      <b>${isToday ? '今天還沒有出攤紀錄' : '這天沒有出攤紀錄'}</b>
+      ${canOpen ? (isToday ? '開攤後填入備貨杯數' : '有出攤的話，可以補登這天的資料') : '請先到設定新增品項與地點'}
       ${canOpen
-        ? `<button class="btn btn-primary" onclick="go('open-stall')">🛒 開始開攤</button>`
+        ? `<button class="btn btn-primary" onclick="go('open-stall')">${isToday ? '開攤' : '補登這一天'}</button>`
         : `<button class="btn btn-secondary" onclick="go('settings')">前往設定</button>`}
     </div>`;
   }
 
+  const list = `
+  <div class="section">
+    <div class="section-label">品項明細</div>
+    <div class="card">
+      <div class="irow ihead"><span>品項</span><span>備貨</span><span>賣出</span><span>剩餘</span></div>
+      ${s.items.map(it => {
+        const has = it.waste !== null;
+        const sold = has ? it.prepared - it.waste : null;
+        const sub = [it.sweetness, has ? money(sold * it.price) : ''].filter(Boolean).join(' · ');
+        return `<div class="irow">
+          <div class="iname">${esc(it.name)}${sub ? `<small>${esc(sub)}</small>` : ''}</div>
+          <span class="n">${it.prepared}</span>
+          <span class="n strong">${has ? sold : '—'}</span>
+          <span class="n ${has && it.waste > 0 ? 'waste' : ''}">${has ? it.waste : '—'}</span>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+
   if (s.status === '開攤中') {
-    const totalPrepared = s.items.reduce((a, i) => a + i.prepared, 0);
-    const maxRevenue = s.items.reduce((a, i) => a + i.prepared * i.price, 0);
-    return `
-    <div class="header"><h1>出攤管理</h1><div class="header-sub">${today}</div></div>
-    <div class="hero-card">
-      <div class="hero-label">📍 ${s.location}</div>
-      <div class="hero-title">${totalPrepared} 杯</div>
-      <div class="hero-sub">最高可達 ${fmtMoney(maxRevenue)}</div>
-      <div class="hero-badge"><span class="hero-dot"></span>開攤中</div>
+    const prepared = s.items.reduce((a, i) => a + i.prepared, 0);
+    const maxRev = s.items.reduce((a, i) => a + i.prepared * i.price, 0);
+    return header + `
+    <div class="hero">
+      <div class="hero-label">${esc(s.location)}</div>
+      <div class="hero-title">備貨 ${prepared} 杯</div>
+      <div class="hero-sub">全部賣完可達 ${money(maxRev)}</div>
+      <span class="pill">開攤中 · 待填剩餘杯數</span>
     </div>
-    <div class="stat-grid">
-      ${s.items.map(item => `
-        <div class="stat-card">
-          <div class="stat-card-label">${item.name}</div>
-          <div class="stat-card-value blue">${item.prepared}</div>
-          <div class="stat-card-sub">${item.sweetness || fmtMoney(item.price) + '/杯'}</div>
-        </div>`).join('')}
-    </div>
+    ${list}
     <div class="section">
-      <button class="btn btn-success" onclick="go('close-stall')">收攤結算</button>
-      <button class="btn btn-secondary" onclick="go('open-stall')" style="margin-top:8px">修改開攤資料</button>
+      <button class="btn btn-primary" onclick="go('close-stall')">填寫收攤剩餘</button>
+      <button class="btn btn-secondary" onclick="go('open-stall')">修改開攤資料</button>
     </div>`;
   }
 
-  // 已收攤
-  const { revenue, wasteCost, totalPrepared, totalWaste } = calcStall(s.items);
-  const totalCost = s.items.reduce((a, item) => a + item.prepared * item.cost, 0);
-  const profit = revenue - totalCost;
-  return `
-  <div class="header"><h1>出攤管理</h1><div class="header-sub">${today}</div></div>
-  <div class="hero-card" style="background:linear-gradient(135deg,#6366f1 0%,#4338ca 100%);box-shadow:0 8px 24px rgba(99,102,241,0.35)">
-    <div class="hero-label">📍 ${s.location} · 已收攤</div>
-    <div class="hero-title">${fmtMoney(revenue)}</div>
-    <div class="hero-sub">售出 ${totalPrepared - totalWaste} 杯 · 報廢 ${totalWaste} 杯</div>
+  const c = calc(s.items);
+  return header + `
+  <div class="hero">
+    <div class="hero-label">${esc(s.location)} · 營業額</div>
+    <div class="hero-title">${money(c.revenue)}</div>
+    <div class="hero-sub">賣出 ${c.sold} 杯 · 備貨 ${c.prepared} 杯 · 剩餘 ${c.waste} 杯</div>
   </div>
   <div class="stat-grid">
-    <div class="stat-card">
-      <div class="stat-card-label">報廢成本</div>
-      <div class="stat-card-value red">${fmtMoney(wasteCost)}</div>
-      <div class="stat-card-sub">${totalWaste} 杯</div>
+    <div class="stat">
+      <div class="stat-label">報廢成本</div>
+      <div class="stat-value bad">${money(c.wasteCost)}</div>
+      <div class="stat-sub">剩餘 ${c.waste} 杯</div>
     </div>
-    <div class="stat-card">
-      <div class="stat-card-label">毛利</div>
-      <div class="stat-card-value ${profit >= 0 ? 'green' : 'red'}">${fmtMoney(profit)}</div>
-      <div class="stat-card-sub">扣除全成本</div>
+    <div class="stat">
+      <div class="stat-label">毛利</div>
+      <div class="stat-value ${c.profit >= 0 ? 'good' : 'bad'}">${money(c.profit)}</div>
+      <div class="stat-sub">營業額 − 備貨成本</div>
     </div>
   </div>
+  ${list}
   <div class="section">
-    <button class="btn btn-primary" onclick="go('summary')">查看完整明細</button>
+    <button class="btn btn-secondary" onclick="go('close-stall')">修改剩餘杯數</button>
   </div>`;
 }
 
-function calcStall(items) {
-  let revenue = 0, wasteCost = 0, totalPrepared = 0, totalWaste = 0;
-  items.forEach(item => {
-    if (item.waste !== null) {
-      revenue    += (item.prepared - item.waste) * item.price;
-      wasteCost  += item.waste * item.cost;
-      totalPrepared += item.prepared;
-      totalWaste    += item.waste;
-    }
-  });
-  return { revenue, wasteCost, totalPrepared, totalWaste };
-}
-
 /* ============================================================
-   OPEN STALL
+   OPEN STALL (開攤表單)
    ============================================================ */
 function renderOpenStall() {
-  const isEdit = state.stall && state.stall.found;
-  const existing = isEdit ? state.stall : null;
+  const s = state.stall;
+  const existing = s && s.found ? s : null;
+  const d = state.viewDate;
 
   const locationOptions = state.locations.map(l =>
-    `<option value="${l}" ${existing && existing.location === l ? 'selected' : ''}>${l}</option>`
-  ).join('');
+    `<option value="${esc(l)}" ${existing && existing.location === l ? 'selected' : ''}>${esc(l)}</option>`).join('');
 
-  const itemOptions = (selectedName) =>
-    state.items.map(item =>
-      `<option value="${item.name}" ${item.name === selectedName ? 'selected' : ''}>${item.name}</option>`
-    ).join('');
-
-  const slots = Array.from({length: 4}, (_, i) => {
+  const slots = Array.from({length: SLOTS}, (_, i) => {
     const ex = existing && existing.items[i];
-    const itemName    = ex ? ex.name : '';
-    const itemSweet   = ex ? ex.sweetness : '';
-    const itemPrepare = ex ? ex.prepared : '';
-    const selItem = state.items.find(it => it.name === itemName);
-    const showSweet = selItem && selItem.sweetnesses.length > 0;
+    const selItem = ex && state.items.find(it => it.name === ex.name);
+    const showSweet = !!(selItem && selItem.sweetnesses.length > 0);
     const sweetOptions = showSweet
-      ? selItem.sweetnesses.map(s => `<option value="${s}" ${s === itemSweet ? 'selected' : ''}>${s}</option>`).join('')
-      : '';
-
+      ? selItem.sweetnesses.map(sw => `<option value="${esc(sw)}" ${sw === ex.sweetness ? 'selected' : ''}>${esc(sw)}</option>`).join('') : '';
     return `
-    <div class="item-slot">
-      <div class="slot-header">
-        <div class="slot-num">${i+1}</div>
-        <span class="slot-title">品項 ${i+1}</span>
-      </div>
+    <div class="slot">
+      <div class="slot-title">品項 ${i+1}</div>
       <div class="slot-grid">
         <div class="full">
-          <label>選擇品項</label>
           <select id="item_${i}" onchange="onItemSelect(${i})">
             <option value="">— 不使用 —</option>
-            ${itemOptions(itemName)}
+            ${state.items.map(it => `<option value="${esc(it.name)}" ${ex && it.name === ex.name ? 'selected' : ''}>${esc(it.name)}</option>`).join('')}
           </select>
         </div>
-        <div id="sweet_wrap_${i}" style="${showSweet ? '' : 'display:none'}">
+        <div class="full" id="sweet_wrap_${i}" style="${showSweet ? '' : 'display:none'}">
           <label>甜度</label>
           <select id="sweet_${i}">${sweetOptions}</select>
         </div>
         <div>
           <label>備貨（杯）</label>
-          <input type="tel" id="qty_${i}" value="${itemPrepare}" placeholder="0">
+          <input type="text" inputmode="numeric" id="qty_${i}" value="${ex ? ex.prepared : ''}" placeholder="0">
+        </div>
+        <div>
+          <label>剩餘（杯）選填</label>
+          <input type="text" inputmode="numeric" id="rem_${i}" placeholder="之後再填">
         </div>
       </div>
     </div>`;
@@ -431,39 +502,38 @@ function renderOpenStall() {
   return `
   <div class="header">
     <div class="header-row">
-      <span class="back-btn" onclick="go('home')">
-        <svg width="10" height="16" viewBox="0 0 10 16" fill="none"><path d="M8 2L2 8l6 6" stroke="#007AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        返回
-      </span>
-      <h1>${isEdit ? '修改開攤' : '開始開攤'}</h1>
-      <span style="width:48px"></span>
+      <span class="back-btn" onclick="go('session')">${BACK} 返回</span>
+      <h1>${existing ? '修改開攤' : '開攤'}</h1>
+      <span style="min-width:56px"></span>
     </div>
+    <div class="header-sub">${fmtLong(d)}</div>
   </div>
   <div class="section">
     <div class="section-label">出攤地點</div>
-    <div class="card" style="padding:14px 16px">
+    <div class="card" style="padding:12px 14px">
       ${state.locations.length > 0
-        ? `<select id="location" style="border:none;padding:0;font-size:17px;background:transparent;color:#1c1c1e;width:100%;background-image:none">${locationOptions}</select>`
-        : '<div style="font-size:14px;color:#ff3b30">請先在設定中新增地點</div>'}
+        ? `<select id="location">${locationOptions}</select>`
+        : '<div style="color:var(--waste)">請先在設定中新增地點</div>'}
     </div>
   </div>
   <div class="section">
-    <div class="section-label">品項與備貨量（最多 4 項）</div>
+    <div class="section-label">品項與備貨量（最多 ${SLOTS} 項）</div>
+    <div class="hint">已經收攤的話，剩餘杯數可以一起填完；全部留空則只記錄開攤。</div>
     ${slots}
-    <button class="btn btn-primary" id="submitOpen" onclick="submitOpenStall(this)">確認開攤</button>
+    <button class="btn btn-primary" id="submitOpen" onclick="submitOpenStall(this)">${existing ? '儲存' : '確認開攤'}</button>
   </div>`;
 }
 
 function onItemSelect(idx) {
-  const name = document.getElementById(`item_${idx}`).value;
-  const item = state.items.find(i => i.name === name);
-  const wrapEl  = document.getElementById(`sweet_wrap_${idx}`);
-  const sweetEl = document.getElementById(`sweet_${idx}`);
+  const item = state.items.find(i => i.name === document.getElementById(`item_${idx}`).value);
+  const wrap = document.getElementById(`sweet_wrap_${idx}`);
+  const sel = document.getElementById(`sweet_${idx}`);
   if (item && item.sweetnesses.length > 0) {
-    wrapEl.style.display = '';
-    sweetEl.innerHTML = item.sweetnesses.map(s => `<option value="${s}">${s}</option>`).join('');
+    wrap.style.display = '';
+    sel.innerHTML = item.sweetnesses.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
   } else {
-    wrapEl.style.display = 'none';
+    wrap.style.display = 'none';
+    sel.innerHTML = '';
   }
 }
 
@@ -472,66 +542,71 @@ async function submitOpenStall(btn) {
   const location = locEl ? locEl.value : '';
   if (!location) { toast('請選擇地點'); return; }
 
-  const items = [];
-  for (let i = 0; i < 4; i++) {
-    const nameEl = document.getElementById(`item_${i}`);
-    const name = nameEl ? nameEl.value : '';
+  const items = [], rems = [];
+  for (let i = 0; i < SLOTS; i++) {
+    const name = document.getElementById(`item_${i}`).value;
     if (!name) continue;
-    const wrapEl = document.getElementById(`sweet_wrap_${i}`);
-    const sweetEl = document.getElementById(`sweet_${i}`);
-    const sweetness = (wrapEl && wrapEl.style.display !== 'none' && sweetEl) ? sweetEl.value : '';
-    const qtyEl = document.getElementById(`qty_${i}`);
-    const prepared = parseInt(qtyEl ? qtyEl.value : '0') || 0;
+    const wrap = document.getElementById(`sweet_wrap_${i}`);
+    const sweetness = wrap.style.display !== 'none' ? document.getElementById(`sweet_${i}`).value : '';
+    const prepared = parseInt(document.getElementById(`qty_${i}`).value) || 0;
     if (prepared <= 0) { toast(`品項 ${i+1} 備貨量需大於 0`); return; }
     if (items.some(it => it.name === name)) { toast(`「${name}」重複選取`); return; }
+    const remRaw = document.getElementById(`rem_${i}`).value.trim();
+    if (remRaw !== '') {
+      const rem = parseInt(remRaw);
+      if (isNaN(rem) || rem < 0 || rem > prepared) { toast(`「${name}」剩餘杯數需介於 0 到備貨量`); return; }
+      rems.push({ name, waste: rem });
+    }
     items.push({ name, sweetness, prepared });
   }
   if (items.length === 0) { toast('請至少填寫一項品項'); return; }
+  if (rems.length > 0 && rems.length !== items.length) { toast('剩餘杯數請全部填寫，或全部留空'); return; }
 
   btn.disabled = true;
+  const label = btn.textContent;
   btn.textContent = '處理中…';
   try {
-    const res = await apiPost({ action: 'openStall', date: todayStr(), location, items });
-    if (res.ok) {
+    const res = await apiPost({ action: 'openStall', date: state.viewDate, location, items });
+    if (!res.ok) { toast(res.error || '操作失敗'); }
+    else {
+      if (rems.length > 0) {
+        const r2 = await apiPost({ action: 'closeStall', date: state.viewDate, items: rems });
+        if (!r2.ok) toast(r2.error || '剩餘杯數儲存失敗');
+      }
       await refreshStall();
-      toast('開攤成功');
-      go('home');
-    } else { toast(res.error || '操作失敗'); }
+      toast(rems.length > 0 ? '已記錄完整場次' : '已儲存');
+      go('session');
+      return;
+    }
   } catch(e) { toast('網路錯誤，請重試'); }
   btn.disabled = false;
-  btn.textContent = '確認開攤';
+  btn.textContent = label;
 }
 
 /* ============================================================
-   CLOSE STALL
+   CLOSE STALL (收攤表單：填剩餘杯數)
    ============================================================ */
 function renderCloseStall() {
   const s = state.stall;
-  if (!s || !s.found || s.status !== '開攤中') {
-    return `<div class="header"><h1>收攤結算</h1></div><div class="loading">無開攤中的紀錄</div>`;
+  if (!s || !s.found) {
+    return `<div class="header"><h1>收攤</h1></div><div class="empty"><b>沒有可收攤的紀錄</b><button class="btn btn-secondary" onclick="go('session')">返回場次</button></div>`;
   }
 
-  const rows = s.items.map((item, i) => `
-    <div class="item-slot">
-      <div class="slot-header">
-        <div class="slot-num" style="background:#34c759">${i+1}</div>
-        <div style="flex:1">
-          <div class="slot-title">${item.name}</div>
-          ${item.sweetness ? `<div style="font-size:12px;color:#8e8e93">${item.sweetness}</div>` : ''}
-        </div>
-        <div style="text-align:right;font-size:13px;color:#8e8e93">備貨 ${item.prepared} 杯</div>
+  const rows = s.items.map((it, i) => `
+    <div class="slot">
+      <div class="slot-title">
+        <span>${esc(it.name)}${it.sweetness ? ` · ${esc(it.sweetness)}` : ''}</span>
+        <em>備貨 ${it.prepared} 杯</em>
       </div>
       <div class="slot-grid">
         <div>
-          <label>報廢（剩餘）杯數</label>
-          <input type="tel" id="waste_${i}" placeholder="0" min="0" max="${item.prepared}"
-            oninput="updateSoldPreview(${i},${item.prepared},${item.price})">
+          <label>剩餘杯數（即報廢）</label>
+          <input type="text" inputmode="numeric" id="waste_${i}" placeholder="0"
+            value="${it.waste !== null ? it.waste : ''}" oninput="updateClose()">
         </div>
         <div>
-          <label>售出預覽</label>
-          <div id="preview_${i}" class="preview-box">
-            ${item.prepared} 杯 · ${fmtMoney(item.prepared * item.price)}
-          </div>
+          <label>賣出</label>
+          <div id="preview_${i}" class="preview"></div>
         </div>
       </div>
     </div>`).join('');
@@ -539,308 +614,281 @@ function renderCloseStall() {
   return `
   <div class="header">
     <div class="header-row">
-      <span class="back-btn" onclick="go('home')">
-        <svg width="10" height="16" viewBox="0 0 10 16" fill="none"><path d="M8 2L2 8l6 6" stroke="#007AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        返回
-      </span>
-      <h1>收攤結算</h1>
-      <span style="width:48px"></span>
+      <span class="back-btn" onclick="go('session')">${BACK} 返回</span>
+      <h1>收攤</h1>
+      <span style="min-width:56px"></span>
     </div>
+    <div class="header-sub">${fmtLong(state.viewDate)} · ${esc(s.location)}</div>
+  </div>
+  <div class="stat-grid" style="margin-top:6px">
+    <div class="stat"><div class="stat-label">預估營業額</div><div class="stat-value good" id="tot_rev">$0</div></div>
+    <div class="stat"><div class="stat-label">賣出杯數</div><div class="stat-value" id="tot_sold">0</div></div>
   </div>
   <div class="section">
-    <div class="section-label">填寫各品項剩餘（報廢）杯數</div>
+    <div class="section-label">數一數剩下幾杯，直接填入；賣完填 0</div>
     ${rows}
-    <button class="btn btn-success" id="submitClose" onclick="submitCloseStall(this)">確認收攤</button>
+    <button class="btn btn-primary" id="submitClose" onclick="submitCloseStall(this)">確認收攤</button>
   </div>`;
 }
 
-function updateSoldPreview(idx, prepared, price) {
-  const waste = parseInt(document.getElementById(`waste_${idx}`).value) || 0;
-  const sold = Math.max(0, prepared - waste);
-  const el = document.getElementById(`preview_${idx}`);
-  el.textContent = `${sold} 杯 · ${fmtMoney(sold * price)}`;
-  el.style.background = sold > 0 ? '' : '#fef2f2';
-  el.style.color = sold > 0 ? '' : '#ef4444';
-  el.style.borderColor = sold > 0 ? '' : '#fecaca';
+function updateClose() {
+  const s = state.stall;
+  let rev = 0, sold = 0;
+  s.items.forEach((it, i) => {
+    const w = parseInt(document.getElementById(`waste_${i}`).value) || 0;
+    const el = document.getElementById(`preview_${i}`);
+    if (w > it.prepared) {
+      el.textContent = '超過備貨';
+      el.classList.add('over');
+      return;
+    }
+    el.classList.remove('over');
+    const sd = it.prepared - w;
+    el.textContent = `${sd} 杯 · ${money(sd * it.price)}`;
+    rev += sd * it.price;
+    sold += sd;
+  });
+  document.getElementById('tot_rev').textContent = money(rev);
+  document.getElementById('tot_sold').textContent = sold;
 }
 
 async function submitCloseStall(btn) {
   const s = state.stall;
-  const items = s.items.map((item, i) => {
-    const waste = parseInt(document.getElementById(`waste_${i}`)?.value || '0') || 0;
-    return { name: item.name, waste };
-  });
-
-  for (let i = 0; i < items.length; i++) {
-    if (items[i].waste > s.items[i].prepared) {
-      toast(`「${s.items[i].name}」報廢不能超過備貨量`);
-      return;
-    }
+  const items = [];
+  for (let i = 0; i < s.items.length; i++) {
+    const waste = parseInt(document.getElementById(`waste_${i}`).value) || 0;
+    if (waste > s.items[i].prepared) { toast(`「${s.items[i].name}」剩餘不能超過備貨量`); return; }
+    items.push({ name: s.items[i].name, waste });
   }
-
   btn.disabled = true;
   btn.textContent = '處理中…';
   try {
-    const res = await apiPost({ action: 'closeStall', date: todayStr(), items });
+    const res = await apiPost({ action: 'closeStall', date: state.viewDate, items });
     if (res.ok) {
       await refreshStall();
-      toast('收攤完成');
-      go('summary');
-    } else { toast(res.error || '操作失敗'); }
+      toast('已儲存');
+      go('session');
+      return;
+    }
+    toast(res.error || '操作失敗');
   } catch(e) { toast('網路錯誤，請重試'); }
   btn.disabled = false;
   btn.textContent = '確認收攤';
 }
 
 /* ============================================================
-   SUMMARY
+   RECORDS (紀錄)
    ============================================================ */
-function renderSummary() {
-  const s = state.stall;
-  if (!s || !s.found) {
-    return `<div class="header"><h1>今日明細</h1></div><div class="loading">無紀錄</div>`;
-  }
-
-  const { revenue, wasteCost, totalPrepared, totalWaste } = calcStall(s.items);
-  const totalCost = s.items.reduce((a, item) => a + item.prepared * item.cost, 0);
-  const profit = revenue - totalCost;
-
-  const rows = s.items.map(item => {
-    const sold = item.waste !== null ? item.prepared - item.waste : item.prepared;
-    return `
-    <tr>
-      <td>
-        <div>${item.name}</div>
-        ${item.sweetness ? `<div style="font-size:12px;color:#8e8e93">${item.sweetness}</div>` : ''}
-      </td>
-      <td class="num">${item.prepared}</td>
-      <td class="num">${sold}</td>
-      <td class="num">${item.waste !== null ? item.waste : '—'}</td>
-      <td class="num" style="color:#007AFF">${fmtMoney(sold * item.price)}</td>
-    </tr>`;
-  }).join('');
-
-  return `
-  <div class="header">
-    <div class="header-row">
-      <span class="back-btn" onclick="go('home')">
-        <svg width="10" height="16" viewBox="0 0 10 16" fill="none"><path d="M8 2L2 8l6 6" stroke="#007AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        返回
-      </span>
-      <h1>今日明細</h1>
-      <span style="width:48px"></span>
-    </div>
-    <div class="header-sub">${fmtDate(s.date)} · ${s.location}</div>
-  </div>
-  <div class="section">
-    <div class="section-label">品項明細</div>
-    <div class="card" style="overflow-x:auto;padding:0 16px">
-      <table class="sum-table">
-        <thead><tr>
-          <th>品項</th><th class="num">備貨</th><th class="num">售出</th><th class="num">報廢</th><th class="num">小計</th>
-        </tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </div>
-  </div>
-  <div class="section">
-    <div class="section-label">總計</div>
-    <div class="card" style="padding:14px 16px">
-      <div class="total-row"><span class="total-label">總備貨</span><span class="total-value">${totalPrepared} 杯</span></div>
-      <div class="total-row"><span class="total-label">總售出</span><span class="total-value">${totalPrepared - totalWaste} 杯</span></div>
-      <div class="total-row"><span class="total-label">總報廢</span><span class="total-value">${totalWaste} 杯</span></div>
-      <div class="total-row"><span class="total-label">營業額</span><span class="total-value blue">${fmtMoney(revenue)}</span></div>
-      <div class="total-row"><span class="total-label">報廢成本</span><span class="total-value red">${fmtMoney(wasteCost)}</span></div>
-      <div class="total-row"><span class="total-label">毛利（扣全成本）</span><span class="total-value ${profit >= 0 ? 'green' : 'red'}">${fmtMoney(profit)}</span></div>
-    </div>
-  </div>`;
+function recRange() {
+  const t = todayStr();
+  if (state.recRange === '30') return { start: addDays(t, -30), end: '' };
+  if (state.recRange === '90') return { start: addDays(t, -90), end: '' };
+  if (state.recRange === 'custom') return { start: state.recCustom.start.replace(/-/g, ''), end: state.recCustom.end.replace(/-/g, '') };
+  return { start: '', end: '' };
 }
 
-/* ============================================================
-   HISTORY
-   ============================================================ */
-function renderHistory() {
-  const records = state.historyData;
-  const f = state.histFilter;
-
-  return `
-  <div class="header"><h1>歷史紀錄</h1></div>
-  <div class="section">
-    <div class="section-label">日期區間</div>
-    <div class="card" style="padding:14px 16px">
-      <div class="filter-row">
-        <input type="date" id="hist_start" value="${f.start}">
-        <span>至</span>
-        <input type="date" id="hist_end" value="${f.end}">
-      </div>
-      <button class="btn btn-primary" style="margin-top:10px" onclick="loadHistory(this)">查詢</button>
-    </div>
-  </div>
-  ${records === null
-    ? '<div class="section"><div class="card"><div style="padding:20px;text-align:center;color:#8e8e93;font-size:14px">請選擇日期區間後查詢</div></div></div>'
-    : records.length === 0
-      ? '<div class="section"><div class="empty-state"><div class="icon">📋</div><p>該區間無出攤紀錄</p></div></div>'
-      : renderHistoryList(records)}`;
-}
-
-function renderHistoryList(records) {
-  const closed = records.filter(r => r.status === '已收攤');
-  const totalRevenue   = closed.reduce((a, r) => a + r.revenue, 0);
-  const totalWasteCost = closed.reduce((a, r) => a + r.wasteCost, 0);
-
-  const items = records.map((rec, ri) => {
-    const itemRows = rec.items.map(item => {
-      const sold = item.waste !== null ? item.prepared - item.waste : null;
-      return `<tr>
-        <td>${item.name}${item.sweetness ? ` <span style="color:#8e8e93;font-size:12px">${item.sweetness}</span>` : ''}</td>
-        <td class="num">${item.prepared}</td>
-        <td class="num">${sold !== null ? sold : '—'}</td>
-        <td class="num">${item.waste !== null ? item.waste : '—'}</td>
-        <td class="num" style="color:#007AFF">${sold !== null ? fmtMoney(sold * item.price) : '—'}</td>
-      </tr>`;
-    }).join('');
-
-    return `
-    <div class="hist-item">
-      <div class="hist-header" onclick="toggleHist(${ri})">
-        <div style="flex:1">
-          <div class="hist-date">${fmtDate(rec.date)}</div>
-          <div class="hist-meta">${rec.location} · 備貨 ${rec.totalPrepared} 杯</div>
-        </div>
-        <div style="text-align:right;margin-right:8px">
-          ${rec.status === '已收攤'
-            ? `<div class="hist-revenue">${fmtMoney(rec.revenue)}</div>
-               <div style="font-size:12px;color:#ff3b30">報廢 ${fmtMoney(rec.wasteCost)}</div>`
-            : `<span class="status-badge status-open" style="font-size:11px">開攤中</span>`}
-        </div>
-        <svg class="hist-chevron" id="chev_${ri}" width="8" height="14" viewBox="0 0 8 14" fill="none"><path d="M1 1l6 6-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </div>
-      <div class="hist-detail" id="hist_detail_${ri}">
-        <div style="margin-top:10px;overflow-x:auto">
-          <table class="sum-table">
-            <thead><tr><th>品項</th><th class="num">備</th><th class="num">售</th><th class="num">廢</th><th class="num">小計</th></tr></thead>
-            <tbody>${itemRows}</tbody>
-          </table>
-        </div>
-      </div>
-    </div>`;
-  }).join('');
-
-  return `
-  <div class="section">
-    <div class="section-label">區間合計</div>
-    <div class="card" style="padding:14px 16px">
-      <div class="total-row"><span class="total-label">總營業額</span><span class="total-value blue">${fmtMoney(totalRevenue)}</span></div>
-      <div class="total-row"><span class="total-label">總報廢成本</span><span class="total-value red">${fmtMoney(totalWasteCost)}</span></div>
-      <div class="total-row"><span class="total-label">出攤次數</span><span class="total-value">${records.length} 次</span></div>
-    </div>
-  </div>
-  <div class="section">
-    <div class="section-label">出攤紀錄</div>
-    ${items}
-  </div>`;
-}
-
-async function loadHistory(btn) {
-  const start = document.getElementById('hist_start').value.replace(/-/g, '');
-  const end   = document.getElementById('hist_end').value.replace(/-/g, '');
-  state.histFilter = {
-    start: document.getElementById('hist_start').value,
-    end:   document.getElementById('hist_end').value
-  };
-  btn.disabled = true;
-  btn.textContent = '查詢中…';
+async function loadRecords() {
+  state.recLoading = true;
+  render();
   try {
+    const { start, end } = recRange();
     const res = await apiGet('getHistory', { startDate: start, endDate: end });
-    state.historyData = res.records || [];
-  } catch(e) { toast('查詢失敗'); }
-  btn.disabled = false;
-  btn.textContent = '查詢';
+    state.records = res.records || [];
+  } catch(e) {
+    state.records = [];
+    toast('載入失敗');
+  }
+  state.recLoading = false;
   render();
 }
 
-function toggleHist(idx) {
-  const det  = document.getElementById(`hist_detail_${idx}`);
-  const chev = document.getElementById(`chev_${idx}`);
-  det.classList.toggle('open');
-  chev.classList.toggle('open');
+function setRange(r) { state.recRange = r; if (r === 'custom') { render(); return; } loadRecords(); }
+function setCustom(which, v) { state.recCustom[which] = v; loadRecords(); }
+function setLoc(v) { state.recLoc = v; render(); }
+function setRecView(v) { state.recView = v; render(); }
+
+function barChart(sessions) {
+  const data = sessions.slice(-16);
+  if (data.length === 0) return '';
+  const W = 320, H = 150, padX = 10, top = 20, bottom = 24;
+  const max = Math.max(...data.map(r => calc(r.items).revenue), 1);
+  const slot = (W - padX * 2) / data.length;
+  const bw = Math.min(30, slot * 0.62);
+  const chartH = H - top - bottom;
+  const compact = data.length > 8;
+  const bars = data.map((r, i) => {
+    const rev = calc(r.items).revenue;
+    const h = Math.max(2, rev / max * chartH);
+    const x = padX + slot * i + (slot - bw) / 2;
+    const y = top + chartH - h;
+    const cx = x + bw / 2;
+    const val = compact ? (rev >= 1000 ? (rev / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : rev) : rev.toLocaleString();
+    const showDate = data.length <= 10 || i % 2 === (data.length - 1) % 2;
+    return `<rect class="bar ${i === data.length - 1 ? 'latest' : ''}" x="${x}" y="${y}" width="${bw}" height="${h}" rx="3"/>
+      <text class="chart-txt" x="${cx}" y="${y - 4}" text-anchor="middle">${val}</text>
+      ${showDate ? `<text class="chart-txt" x="${cx}" y="${H - 8}" text-anchor="middle">${fmtShort(r.date)}</text>` : ''}`;
+  }).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="每場營業額長條圖">
+    <line class="chart-base" x1="${padX}" x2="${W - padX}" y1="${top + chartH}" y2="${top + chartH}"/>${bars}</svg>`;
+}
+
+function renderRecords() {
+  const header = `<div class="header"><h1>紀錄</h1></div>`;
+  const ranges = [['30','近 30 天'],['90','近 90 天'],['all','全部'],['custom','自訂']];
+  const all = state.records || [];
+  const locs = [...new Set([...state.locations, ...all.map(r => r.location)])].filter(Boolean);
+
+  const filter = `
+  <div class="section" style="margin-top:4px">
+    <div class="chips">${ranges.map(([v, l]) => `<button class="chip ${state.recRange === v ? 'on' : ''}" onclick="setRange('${v}')">${l}</button>`).join('')}</div>
+    ${state.recRange === 'custom' ? `
+    <div class="filter-dates">
+      <input type="date" value="${esc(state.recCustom.start)}" onchange="setCustom('start', this.value)">
+      <span>至</span>
+      <input type="date" value="${esc(state.recCustom.end)}" onchange="setCustom('end', this.value)">
+    </div>` : ''}
+    <div style="margin-top:10px">
+      <select onchange="setLoc(this.value)" aria-label="地點篩選">
+        <option value="">全部地點</option>
+        ${locs.map(l => `<option value="${esc(l)}" ${state.recLoc === l ? 'selected' : ''}>${esc(l)}</option>`).join('')}
+      </select>
+    </div>
+  </div>`;
+
+  if (state.recLoading || state.records === null) return header + filter + '<div class="loading">載入中…</div>';
+
+  const recs = all.filter(r => !state.recLoc || r.location === state.recLoc);
+  if (recs.length === 0) return header + filter + '<div class="empty"><b>這個條件下沒有出攤紀錄</b>換個日期區間或地點看看</div>';
+
+  const closed = recs.filter(r => r.status === '已收攤');
+  const agg = closed.reduce((a, r) => {
+    const c = calc(r.items);
+    a.revenue += c.revenue; a.wasteCost += c.wasteCost; return a;
+  }, { revenue: 0, wasteCost: 0 });
+  const asc = [...closed].sort((a, b) => a.date.localeCompare(b.date));
+
+  const summary = `
+  <div class="section">
+    <div class="card totals">
+      <div><div class="stat-label">營業額</div><div class="stat-value good">${money(agg.revenue)}</div></div>
+      <div><div class="stat-label">報廢成本</div><div class="stat-value bad">${money(agg.wasteCost)}</div></div>
+      <div><div class="stat-label">出攤場次</div><div class="stat-value">${recs.length}</div></div>
+    </div>
+  </div>
+  ${asc.length > 0 ? `<div class="section"><div class="card chart-card"><div class="chart-title">每場營業額${asc.length > 16 ? '（最近 16 場）' : ''}</div>${barChart(asc)}</div></div>` : ''}
+  <div class="section">
+    <div class="seg">
+      <button class="${state.recView === 'sessions' ? 'on' : ''}" onclick="setRecView('sessions')">各場次</button>
+      <button class="${state.recView === 'items' ? 'on' : ''}" onclick="setRecView('items')">品項配貨</button>
+    </div>
+  </div>`;
+
+  return header + filter + summary + (state.recView === 'sessions' ? renderSessionList(recs) : renderItemList(recs));
+}
+
+function renderSessionList(recs) {
+  return `<div class="section"><div class="card">${recs.map(r => {
+    const c = calc(r.items);
+    const done = r.status === '已收攤';
+    const prepared = r.items.reduce((a, i) => a + i.prepared, 0);
+    return `<div class="srow" onclick="openSession('${r.date}')">
+      <div class="srow-main">
+        <div class="srow-date">${fmtShort(r.date)} 週${WD[parse8(r.date).getDay()]}</div>
+        <div class="srow-meta">${esc(r.location)} · ${done ? `賣 ${c.sold} / 備 ${c.prepared} 杯` : `備貨 ${prepared} 杯`}</div>
+      </div>
+      ${done
+        ? `<div class="srow-money">${money(c.revenue)}<small>報廢 ${money(c.wasteCost)}</small></div>`
+        : '<span class="tag-open">開攤中</span>'}
+    </div>`;
+  }).join('')}</div></div>`;
+}
+
+function renderItemList(recs) {
+  const map = {};
+  recs.forEach(r => r.items.forEach(it => {
+    (map[it.name] = map[it.name] || []).push({ date: r.date, location: r.location, ...it });
+  }));
+  const names = Object.keys(map).sort((a, b) => map[b].length - map[a].length);
+  return `<div class="section">${names.map(name => {
+    const rows = map[name].sort((a, b) => b.date.localeCompare(a.date));
+    return `<div class="card" style="margin-bottom:10px">
+      <div class="pcard-head"><b>${esc(name)}</b><span>出攤 ${rows.length} 次</span></div>
+      <div class="prow ihead" style="padding:8px 16px"><span>場次</span><span class="n">備貨</span><span class="n">賣出</span><span class="n">剩餘</span></div>
+      ${rows.map(r => {
+        const has = r.waste !== null;
+        const sub = [esc(r.location), r.sweetness ? esc(r.sweetness) : ''].filter(Boolean).join(' · ');
+        return `<div class="prow">
+          <div>${fmtShort(r.date)}<small>${sub}</small></div>
+          <span class="n">${r.prepared}</span>
+          <span class="n strong">${has ? r.prepared - r.waste : '—'}</span>
+          <span class="n ${has && r.waste > 0 ? 'waste' : ''}">${has ? r.waste : '—'}</span>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }).join('')}</div>`;
 }
 
 /* ============================================================
    SETTINGS
    ============================================================ */
 function renderSettings() {
-  const itemRows = state.items.map(item => `
+  const itemRows = state.items.map((it, i) => `
     <div class="settings-item">
       <div class="settings-item-info">
-        <div class="settings-item-name">${item.name}</div>
-        <div class="settings-item-sub">售 ${fmtMoney(item.price)} · 成本 ${fmtMoney(item.cost)}${item.sweetnesses.length > 0 ? ` · ${item.sweetnesses.join('、')}` : ''}</div>
+        <div class="settings-item-name">${esc(it.name)}</div>
+        <div class="settings-item-sub">售 ${money(it.price)} · 成本 ${money(it.cost)}${it.sweetnesses.length > 0 ? ` · ${esc(it.sweetnesses.join('、'))}` : ''}</div>
       </div>
       <div class="settings-item-actions">
-        <button class="btn btn-secondary btn-sm" onclick="editItem(${JSON.stringify(item.name)})">編輯</button>
-        <button class="btn btn-danger btn-sm" onclick="confirmDeleteItem(${JSON.stringify(item.name)})">刪除</button>
+        <button class="btn btn-secondary btn-sm" onclick="editItem(${i})">編輯</button>
+        <button class="btn btn-danger btn-sm" onclick="confirmDeleteItem(${i})">刪除</button>
       </div>
     </div>`).join('');
 
-  const locRows = state.locations.map(loc => `
+  const locRows = state.locations.map((loc, i) => `
     <div class="settings-item">
-      <div class="settings-item-info"><div class="settings-item-name">${loc}</div></div>
+      <div class="settings-item-info"><div class="settings-item-name">${esc(loc)}</div></div>
       <div class="settings-item-actions">
-        <button class="btn btn-danger btn-sm" onclick="confirmDeleteLocation(${JSON.stringify(loc)})">刪除</button>
+        <button class="btn btn-danger btn-sm" onclick="confirmDeleteLocation(${i})">刪除</button>
       </div>
     </div>`).join('');
 
   return `
   <div class="header"><h1>設定</h1></div>
   <div class="section">
-    <div class="section-label">品項管理</div>
-    <div class="card">
-      ${itemRows || '<div style="padding:16px;color:#8e8e93;font-size:14px;text-align:center">尚無品項</div>'}
-    </div>
-    <button class="btn btn-primary" onclick="state.editItemOriginal=null;go('edit-item')">+ 新增品項</button>
+    <div class="section-label">品項</div>
+    <div class="card">${itemRows || '<div class="empty" style="padding:24px">尚無品項</div>'}</div>
+    <button class="btn btn-primary" onclick="state.editItemOriginal=null;go('edit-item')">新增品項</button>
   </div>
   <div class="section">
-    <div class="section-label">地點管理</div>
-    <div class="card">
-      ${locRows || '<div style="padding:16px;color:#8e8e93;font-size:14px;text-align:center">尚無地點</div>'}
-    </div>
-    <button class="btn btn-primary" onclick="go('add-location')">+ 新增地點</button>
+    <div class="section-label">地點</div>
+    <div class="card">${locRows || '<div class="empty" style="padding:24px">尚無地點</div>'}</div>
+    <button class="btn btn-primary" onclick="go('add-location')">新增地點</button>
   </div>`;
 }
 
-/* ============================================================
-   EDIT ITEM
-   ============================================================ */
 function renderEditItem() {
   const orig = state.editItemOriginal;
   const item = orig ? state.items.find(i => i.name === orig) : null;
   window._editSweets = item ? [...item.sweetnesses] : [];
 
-  const tagsHtml = () => window._editSweets.map(s =>
-    `<div class="tag">${s}<span class="tag-del" onclick="removeSweet(${JSON.stringify(s)})">×</span></div>`
-  ).join('');
-
   return `
   <div class="header">
     <div class="header-row">
-      <span class="back-btn" onclick="go('settings')">
-        <svg width="10" height="16" viewBox="0 0 10 16" fill="none"><path d="M8 2L2 8l6 6" stroke="#007AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        返回
-      </span>
+      <span class="back-btn" onclick="go('settings')">${BACK} 返回</span>
       <h1>${item ? '編輯品項' : '新增品項'}</h1>
-      <span style="width:48px"></span>
+      <span style="min-width:56px"></span>
     </div>
   </div>
   <div class="section">
-    <div class="card" style="padding:14px 16px">
+    <div class="card" style="padding:16px">
       <div class="form-label">品項名稱</div>
-      <input type="text" id="item_name" value="${item ? item.name : ''}" placeholder="例：仙草奶茶">
+      <input type="text" id="item_name" value="${esc(item ? item.name : '')}" placeholder="例：仙草奶茶">
       <div class="form-label">售價（元）</div>
-      <input type="tel" id="item_price" value="${item ? item.price : ''}" placeholder="例：55">
+      <input type="text" inputmode="numeric" id="item_price" value="${item ? item.price : ''}" placeholder="例：55">
       <div class="form-label">成本價（元）</div>
-      <input type="tel" id="item_cost" value="${item ? item.cost : ''}" placeholder="例：20">
-      <div class="form-label" style="margin-top:16px">甜度選項（選填）</div>
-      <div id="sweet_tags" class="tags" style="min-height:32px">${tagsHtml()}</div>
+      <input type="text" inputmode="numeric" id="item_cost" value="${item ? item.cost : ''}" placeholder="例：20">
+      <div class="form-label">甜度選項（選填）</div>
+      <div id="sweet_tags" class="tags" style="min-height:32px">${sweetTagsHtml()}</div>
       <div style="display:flex;gap:8px;margin-top:10px">
         <input type="text" id="sweet_input" placeholder="輸入甜度名稱" style="flex:1">
         <button class="btn btn-secondary btn-sm" style="flex-shrink:0" onclick="addSweet()">加入</button>
@@ -850,6 +898,10 @@ function renderEditItem() {
   </div>`;
 }
 
+function sweetTagsHtml() {
+  return window._editSweets.map((s, i) =>
+    `<div class="tag">${esc(s)}<span class="tag-del" onclick="removeSweet(${i})">×</span></div>`).join('');
+}
 function addSweet() {
   const inp = document.getElementById('sweet_input');
   const val = inp.value.trim();
@@ -857,16 +909,11 @@ function addSweet() {
   if (window._editSweets.includes(val)) { toast('已存在'); return; }
   window._editSweets.push(val);
   inp.value = '';
-  document.getElementById('sweet_tags').innerHTML = window._editSweets.map(s =>
-    `<div class="tag">${s}<span class="tag-del" onclick="removeSweet(${JSON.stringify(s)})">×</span></div>`
-  ).join('');
+  document.getElementById('sweet_tags').innerHTML = sweetTagsHtml();
 }
-
-function removeSweet(s) {
-  window._editSweets = window._editSweets.filter(x => x !== s);
-  document.getElementById('sweet_tags').innerHTML = window._editSweets.map(sv =>
-    `<div class="tag">${sv}<span class="tag-del" onclick="removeSweet(${JSON.stringify(sv)})">×</span></div>`
-  ).join('');
+function removeSweet(i) {
+  window._editSweets.splice(i, 1);
+  document.getElementById('sweet_tags').innerHTML = sweetTagsHtml();
 }
 
 async function saveItemAction(btn) {
@@ -874,29 +921,28 @@ async function saveItemAction(btn) {
   const price = parseFloat(document.getElementById('item_price').value) || 0;
   const cost  = parseFloat(document.getElementById('item_cost').value) || 0;
   if (!name) { toast('請輸入品項名稱'); return; }
-
   btn.disabled = true;
   btn.textContent = '儲存中…';
   try {
     const res = await apiPost({ action: 'saveItem', originalName: state.editItemOriginal || name, name, price, cost, sweetnesses: window._editSweets || [] });
     if (res.ok) {
-      const itemsRes = await apiGet('getItems');
-      state.items = itemsRes.items || [];
+      state.items = (await apiGet('getItems')).items || [];
+      state.records = null;
       toast('已儲存');
       go('settings');
-    } else { toast(res.error || '儲存失敗'); }
+      return;
+    }
+    toast(res.error || '儲存失敗');
   } catch(e) { toast('網路錯誤'); }
   btn.disabled = false;
   btn.textContent = '儲存品項';
 }
 
-function editItem(name) {
-  state.editItemOriginal = name;
-  go('edit-item');
-}
+function editItem(i) { state.editItemOriginal = state.items[i].name; go('edit-item'); }
 
-async function confirmDeleteItem(name) {
-  if (!confirm(`確定刪除「${name}」？`)) return;
+async function confirmDeleteItem(i) {
+  const name = state.items[i].name;
+  if (!confirm(`確定刪除「${name}」？過去紀錄的金額會因此無法計算。`)) return;
   try {
     const res = await apiPost({ action: 'deleteItem', name });
     if (res.ok) {
@@ -907,23 +953,17 @@ async function confirmDeleteItem(name) {
   } catch(e) { toast('網路錯誤'); }
 }
 
-/* ============================================================
-   ADD LOCATION
-   ============================================================ */
 function renderAddLocation() {
   return `
   <div class="header">
     <div class="header-row">
-      <span class="back-btn" onclick="go('settings')">
-        <svg width="10" height="16" viewBox="0 0 10 16" fill="none"><path d="M8 2L2 8l6 6" stroke="#007AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        返回
-      </span>
+      <span class="back-btn" onclick="go('settings')">${BACK} 返回</span>
       <h1>新增地點</h1>
-      <span style="width:48px"></span>
+      <span style="min-width:56px"></span>
     </div>
   </div>
   <div class="section">
-    <div class="card" style="padding:14px 16px">
+    <div class="card" style="padding:16px">
       <div class="form-label">地點名稱</div>
       <input type="text" id="loc_name" placeholder="例：台中中友百貨">
     </div>
@@ -942,13 +982,16 @@ async function saveLocationAction(btn) {
       state.locations = (await apiGet('getLocations')).locations || [];
       toast('已新增');
       go('settings');
-    } else { toast(res.error || '新增失敗'); }
+      return;
+    }
+    toast(res.error || '新增失敗');
   } catch(e) { toast('網路錯誤'); }
   btn.disabled = false;
   btn.textContent = '新增地點';
 }
 
-async function confirmDeleteLocation(name) {
+async function confirmDeleteLocation(i) {
+  const name = state.locations[i];
   if (!confirm(`確定刪除「${name}」？`)) return;
   try {
     const res = await apiPost({ action: 'deleteLocation', name });
@@ -964,6 +1007,7 @@ async function confirmDeleteLocation(name) {
 function attachHandlers() {
   const si = document.getElementById('sweet_input');
   if (si) si.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addSweet(); } });
+  if (state.screen === 'close-stall' && state.stall && state.stall.found) updateClose();
 }
 
 /* ---- Init ---- */
