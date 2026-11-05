@@ -69,7 +69,8 @@
     .datenav { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
     .icon-btn { width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); display: flex; align-items: center; justify-content: center; cursor: pointer; }
     .icon-btn:active { background: var(--surface2); }
-    .datepick { position: relative; flex: 1; text-align: center; cursor: pointer; padding: 2px 0; }
+    .datepick { position: relative; flex: 1; text-align: center; cursor: pointer; padding: 6px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+    .dp-main svg { width: 16px; height: 16px; vertical-align: -2px; margin-right: 6px; color: var(--accent); }
     .dp-main { font-family: var(--serif); font-size: 19px; font-weight: 700; display: block; }
     .dp-sub { font-size: 12px; color: var(--ink2); display: block; margin-top: 1px; }
     .datepick input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; padding: 0; }
@@ -329,7 +330,7 @@ const BACK = `<svg width="10" height="16" viewBox="0 0 10 16" fill="none"><path 
 
 function renderNavbar() {
   const tabs = [
-    { id: 'session', label: '場次', icon: '<path d="M5 8h13v5a6 6 0 0 1-6 6h-1a6 6 0 0 1-6-6V8z"/><path d="M18 9h1.5a2.5 2.5 0 0 1 0 5H18"/><path d="M9 3v2M13 3v2"/>' },
+    { id: 'session', label: '一日狀態', icon: '<path d="M5 8h13v5a6 6 0 0 1-6 6h-1a6 6 0 0 1-6-6V8z"/><path d="M18 9h1.5a2.5 2.5 0 0 1 0 5H18"/><path d="M9 3v2M13 3v2"/>' },
     { id: 'records', label: '紀錄', icon: '<path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/>' },
     { id: 'settings', label: '設定', icon: '<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>' }
   ];
@@ -367,9 +368,9 @@ function renderSession() {
     <div class="datenav">
       <button class="icon-btn" onclick="shiftDate(-1)" aria-label="前一天">${BACK}</button>
       <label class="datepick">
-        <span class="dp-main">${fmtLong(d)}</span>
-        <span class="dp-sub">${d.slice(0,4)}${isToday ? ' · 今天' : ''}</span>
-        <input type="date" value="${dash(d)}" onchange="pickDate(this.value)" aria-label="選擇日期">
+        <span class="dp-main"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>${fmtLong(d)}</span>
+        <span class="dp-sub">${d.slice(0,4)}${isToday ? ' · 今天' : ''} · 點此選日期</span>
+        <input type="date" value="${dash(d)}" onchange="pickDate(this.value)" onclick="try{this.showPicker()}catch(e){}" aria-label="選擇日期">
       </label>
       <button class="icon-btn" onclick="shiftDate(1)" aria-label="後一天" style="transform:scaleX(-1)">${BACK}</button>
     </div>
