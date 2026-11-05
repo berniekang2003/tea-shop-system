@@ -133,6 +133,7 @@
     .slot-grid label { font-size: 12px; color: var(--ink2); display: block; margin-bottom: 5px; }
     .preview { padding: 11px 13px; background: var(--accent-soft); color: var(--accent); border-radius: 10px; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
     .preview.over { background: var(--waste-soft); color: var(--waste); }
+    .preview.idle { background: var(--surface2); color: var(--ink3); font-weight: 500; }
     .hint { font-size: 12px; color: var(--ink3); margin: -2px 2px 10px; }
 
     /* CHIPS / SEGMENT */
@@ -236,6 +237,8 @@ function fmtLong(s) { return `${+s.slice(4,6)}月${+s.slice(6,8)}日 週${WD[par
 function fmtShort(s) { return `${+s.slice(4,6)}/${+s.slice(6,8)}`; }
 function fmtShortY(s) { return (s.slice(0,4) === String(new Date().getFullYear()) ? '' : s.slice(2,4) + '/') + fmtShort(s); }
 function money(n) { return (n < 0 ? '-$' : '$') + Math.abs(Math.round(n)).toLocaleString(); }
+function parseNonNegInt(str) { const s = String(str ?? '').trim(); if (!/^\d+$/.test(s)) return null; return parseInt(s, 10); }
+const isFormScreen = () => ['open-stall', 'close-stall', 'edit-item', 'add-location'].includes(state.screen);
 
 function toast(msg) {
   const t = document.getElementById('toast');
@@ -260,14 +263,21 @@ async function apiPost(data) {
 async function loadAll() {
   state.viewDate = todayStr();
   try {
-    const [itemsRes, locsRes, stallRes] = await Promise.all([
-      apiGet('getItems'),
-      apiGet('getLocations'),
-      apiGet('getStallData', { date: state.viewDate })
-    ]);
-    state.items = itemsRes.items || [];
-    state.locations = locsRes.locations || [];
-    state.stall = stallRes;
+    const init = await apiGet('getInit', { date: state.viewDate });
+    if (init && init.items) {
+      state.items = init.items;
+      state.locations = init.locations || [];
+      state.stall = init.stall || { found: false };
+    } else {
+      const [itemsRes, locsRes, stallRes] = await Promise.all([
+        apiGet('getItems'),
+        apiGet('getLocations'),
+        apiGet('getStallData', { date: state.viewDate })
+      ]);
+      state.items = itemsRes.items || [];
+      state.locations = locsRes.locations || [];
+      state.stall = stallRes;
+    }
   } catch(e) {
     state.stall = { found: false, error: true };
     toast('載入失敗，請重試');
@@ -291,7 +301,7 @@ async function loadStall() {
     toast('載入失敗');
   }
   state.stallLoading = false;
-  render();
+  if (!isFormScreen()) render();
 }
 
 async function refreshStall() {
@@ -455,6 +465,7 @@ function renderSession() {
   ${list}
   <div class="section">
     <button class="btn btn-secondary" onclick="go('close-stall')">修改剩餘杯數</button>
+    <button class="btn btn-secondary" onclick="go('open-stall')">修改開攤／備貨資料</button>
   </div>`;
 }
 
@@ -495,7 +506,7 @@ function renderOpenStall() {
         </div>
         <div>
           <label>剩餘（杯）選填</label>
-          <input type="text" inputmode="numeric" id="rem_${i}" placeholder="之後再填">
+          <input type="text" inputmode="numeric" id="rem_${i}" value="${ex && ex.waste !== null && ex.waste !== undefined ? ex.waste : ''}" placeholder="之後再填">
         </div>
       </div>
     </div>`;
@@ -520,7 +531,7 @@ function renderOpenStall() {
   </div>
   <div class="section">
     <div class="section-label">品項與備貨量（最多 ${SLOTS} 項）</div>
-    <div class="hint">已經收攤的話，剩餘杯數可以一起填完；全部留空則只記錄開攤。</div>
+    <div class="hint">${existing && existing.status === '已收攤' ? '剩餘杯數已填寫；全部清空會讓這個場次回到「開攤中」。' : '已經收攤的話，剩餘杯數可以一起填完；全部留空則只記錄開攤。'}</div>
     ${slots}
     <button class="btn btn-primary" id="submitOpen" onclick="submitOpenStall(this)">${existing ? '儲存' : '確認開攤'}</button>
   </div>`;
@@ -544,42 +555,47 @@ async function submitOpenStall(btn) {
   const location = locEl ? locEl.value : '';
   if (!location) { toast('請選擇地點'); return; }
 
-  const items = [], rems = [];
+  const items = [];
+  let remCount = 0;
   for (let i = 0; i < SLOTS; i++) {
     const name = document.getElementById(`item_${i}`).value;
     if (!name) continue;
     const wrap = document.getElementById(`sweet_wrap_${i}`);
     const sweetness = wrap.style.display !== 'none' ? document.getElementById(`sweet_${i}`).value : '';
-    const prepared = parseInt(document.getElementById(`qty_${i}`).value) || 0;
-    if (prepared <= 0) { toast(`品項 ${i+1} 備貨量需大於 0`); return; }
+    const qtyRaw = document.getElementById(`qty_${i}`).value.trim();
+    if (qtyRaw === '') { toast(`請填寫「${name}」的備貨量`); return; }
+    const prepared = parseNonNegInt(qtyRaw);
+    if (prepared === null) { toast(`「${name}」備貨量請輸入 0 以上的整數`); return; }
+    if (prepared === 0) { toast(`「${name}」備貨量需大於 0`); return; }
     if (items.some(it => it.name === name)) { toast(`「${name}」重複選取`); return; }
+    const item = { name, sweetness, prepared };
     const remRaw = document.getElementById(`rem_${i}`).value.trim();
     if (remRaw !== '') {
-      const rem = parseInt(remRaw);
-      if (isNaN(rem) || rem < 0 || rem > prepared) { toast(`「${name}」剩餘杯數需介於 0 到備貨量`); return; }
-      rems.push({ name, waste: rem });
+      const rem = parseNonNegInt(remRaw);
+      if (rem === null) { toast(`「${name}」剩餘杯數請輸入 0 以上的整數`); return; }
+      if (rem > prepared) { toast(`「${name}」剩餘杯數需介於 0 到備貨量`); return; }
+      item.waste = rem;
+      remCount++;
     }
-    items.push({ name, sweetness, prepared });
+    items.push(item);
   }
   if (items.length === 0) { toast('請至少填寫一項品項'); return; }
-  if (rems.length > 0 && rems.length !== items.length) { toast('剩餘杯數請全部填寫，或全部留空'); return; }
+  if (remCount > 0 && remCount !== items.length) { toast('剩餘杯數請全部填寫，或全部留空'); return; }
+  if (remCount === 0 && state.stall && state.stall.found && state.stall.status === '已收攤' &&
+      !confirm('清空剩餘杯數會讓這個場次回到「開攤中」，確定嗎？')) return;
 
   btn.disabled = true;
   const label = btn.textContent;
   btn.textContent = '處理中…';
   try {
     const res = await apiPost({ action: 'openStall', date: state.viewDate, location, items });
-    if (!res.ok) { toast(res.error || '操作失敗'); }
-    else {
-      if (rems.length > 0) {
-        const r2 = await apiPost({ action: 'closeStall', date: state.viewDate, items: rems });
-        if (!r2.ok) toast(r2.error || '剩餘杯數儲存失敗');
-      }
+    if (res.ok) {
       await refreshStall();
-      toast(rems.length > 0 ? '已記錄完整場次' : '已儲存');
+      toast(remCount > 0 ? '已記錄完整場次' : '已儲存');
       go('session');
       return;
     }
+    toast(res.error || '操作失敗');
   } catch(e) { toast('網路錯誤，請重試'); }
   btn.disabled = false;
   btn.textContent = label;
@@ -637,14 +653,13 @@ function updateClose() {
   const s = state.stall;
   let rev = 0, sold = 0;
   s.items.forEach((it, i) => {
-    const w = parseInt(document.getElementById(`waste_${i}`).value) || 0;
+    const raw = document.getElementById(`waste_${i}`).value.trim();
     const el = document.getElementById(`preview_${i}`);
-    if (w > it.prepared) {
-      el.textContent = '超過備貨';
-      el.classList.add('over');
-      return;
-    }
-    el.classList.remove('over');
+    el.classList.remove('over', 'idle');
+    if (raw === '') { el.textContent = '待輸入'; el.classList.add('idle'); return; }
+    const w = parseNonNegInt(raw);
+    if (w === null) { el.textContent = '數字有誤'; el.classList.add('over'); return; }
+    if (w > it.prepared) { el.textContent = '超過備貨'; el.classList.add('over'); return; }
     const sd = it.prepared - w;
     el.textContent = `${sd} 杯 · ${money(sd * it.price)}`;
     rev += sd * it.price;
@@ -658,9 +673,13 @@ async function submitCloseStall(btn) {
   const s = state.stall;
   const items = [];
   for (let i = 0; i < s.items.length; i++) {
-    const waste = parseInt(document.getElementById(`waste_${i}`).value) || 0;
-    if (waste > s.items[i].prepared) { toast(`「${s.items[i].name}」剩餘不能超過備貨量`); return; }
-    items.push({ name: s.items[i].name, waste });
+    const it = s.items[i];
+    const raw = document.getElementById(`waste_${i}`).value.trim();
+    if (raw === '') { toast(`請填寫「${it.name}」的剩餘杯數（賣完請填 0）`); return; }
+    const waste = parseNonNegInt(raw);
+    if (waste === null) { toast(`「${it.name}」請輸入 0 以上的整數`); return; }
+    if (waste > it.prepared) { toast(`「${it.name}」剩餘不能超過備貨量`); return; }
+    items.push({ name: it.name, waste });
   }
   btn.disabled = true;
   btn.textContent = '處理中…';
@@ -701,7 +720,7 @@ async function loadRecords() {
     toast('載入失敗');
   }
   state.recLoading = false;
-  render();
+  if (!isFormScreen()) render();
 }
 
 function setRange(r) { state.recRange = r; if (r === 'custom') { render(); return; } loadRecords(); }
@@ -859,7 +878,7 @@ function renderSettings() {
   <div class="section">
     <div class="section-label">品項</div>
     <div class="card">${itemRows || '<div class="empty" style="padding:24px">尚無品項</div>'}</div>
-    <button class="btn btn-primary" onclick="state.editItemOriginal=null;go('edit-item')">新增品項</button>
+    <button class="btn btn-primary" onclick="newItem()">新增品項</button>
   </div>
   <div class="section">
     <div class="section-label">地點</div>
@@ -871,7 +890,7 @@ function renderSettings() {
 function renderEditItem() {
   const orig = state.editItemOriginal;
   const item = orig ? state.items.find(i => i.name === orig) : null;
-  window._editSweets = item ? [...item.sweetnesses] : [];
+  window._editSweets = window._editSweets || [];
 
   return `
   <div class="header">
@@ -906,7 +925,7 @@ function sweetTagsHtml() {
 }
 function addSweet() {
   const inp = document.getElementById('sweet_input');
-  const val = inp.value.trim();
+  const val = inp.value.replace(/[,，]/g, '').trim();
   if (!val) return;
   if (window._editSweets.includes(val)) { toast('已存在'); return; }
   window._editSweets.push(val);
@@ -941,17 +960,18 @@ async function saveItemAction(btn) {
   btn.textContent = '儲存品項';
 }
 
-function editItem(i) { state.editItemOriginal = state.items[i].name; go('edit-item'); }
+function editItem(i) { state.editItemOriginal = state.items[i].name; window._editSweets = [...state.items[i].sweetnesses]; go('edit-item'); }
+function newItem() { state.editItemOriginal = null; window._editSweets = []; go('edit-item'); }
 
 async function confirmDeleteItem(i) {
   const name = state.items[i].name;
-  if (!confirm(`確定刪除「${name}」？過去紀錄的金額會因此無法計算。`)) return;
+  if (!confirm(`確定從設定中刪除「${name}」？（過去已出攤的歷史紀錄與金額會完整保留）`)) return;
   try {
     const res = await apiPost({ action: 'deleteItem', name });
     if (res.ok) {
       state.items = (await apiGet('getItems')).items || [];
       toast('已刪除');
-      render();
+      if (!isFormScreen()) render();
     } else { toast(res.error || '刪除失敗'); }
   } catch(e) { toast('網路錯誤'); }
 }
@@ -1001,7 +1021,7 @@ async function confirmDeleteLocation(i) {
     if (res.ok) {
       state.locations = (await apiGet('getLocations')).locations || [];
       toast('已刪除');
-      render();
+      if (!isFormScreen()) render();
     } else { toast(res.error || '刪除失敗'); }
   } catch(e) { toast('網路錯誤'); }
 }
