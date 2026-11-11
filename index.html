@@ -129,6 +129,7 @@
     .slot-title { font-size: 13px; font-weight: 700; color: var(--ink2); margin-bottom: 10px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
     .slot-title em { font-style: normal; font-weight: 400; font-size: 12px; color: var(--ink3); }
     .slot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .slot-grid.g3 { grid-template-columns: 1fr 1fr 1fr; }
     .slot-grid .full { grid-column: 1 / -1; }
     .slot-grid label { font-size: 12px; color: var(--ink2); display: block; margin-bottom: 5px; }
     .preview { padding: 11px 13px; background: var(--accent-soft); color: var(--accent); border-radius: 10px; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
@@ -238,7 +239,7 @@ function fmtShort(s) { return `${+s.slice(4,6)}/${+s.slice(6,8)}`; }
 function fmtShortY(s) { return (s.slice(0,4) === String(new Date().getFullYear()) ? '' : s.slice(2,4) + '/') + fmtShort(s); }
 function money(n) { return (n < 0 ? '-$' : '$') + Math.abs(Math.round(n)).toLocaleString(); }
 function parseNonNegInt(str) { const s = String(str ?? '').trim(); if (!/^\d+$/.test(s)) return null; return parseInt(s, 10); }
-const isFormScreen = () => ['open-stall', 'close-stall', 'edit-item', 'add-location'].includes(state.screen);
+const isFormScreen = () => ['open-stall', 'close-stall', 'topup', 'edit-item', 'add-location'].includes(state.screen);
 
 function toast(msg) {
   const t = document.getElementById('toast');
@@ -330,7 +331,7 @@ function render() {
   const app = document.getElementById('app');
   if (!state.loaded) { app.innerHTML = '<div class="loading">載入中…</div>'; return; }
   const views = {
-    'session': renderSession, 'open-stall': renderOpenStall, 'close-stall': renderCloseStall,
+    'session': renderSession, 'open-stall': renderOpenStall, 'close-stall': renderCloseStall, 'topup': renderTopup,
     'records': renderRecords, 'settings': renderSettings, 'edit-item': renderEditItem, 'add-location': renderAddLocation
   };
   app.innerHTML = views[state.screen]() + renderNavbar();
@@ -345,7 +346,7 @@ function renderNavbar() {
     { id: 'records', label: '紀錄', icon: '<path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/>' },
     { id: 'settings', label: '設定', icon: '<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>' }
   ];
-  const active = ['session','open-stall','close-stall'].includes(state.screen) ? 'session'
+  const active = ['session','open-stall','close-stall','topup'].includes(state.screen) ? 'session'
                : state.screen === 'records' ? 'records' : 'settings';
   return `<nav class="nav">${tabs.map(t => `
     <div class="nav-tab ${active===t.id?'active':''}" onclick="go('${t.id}')">
@@ -415,7 +416,7 @@ function renderSession() {
       ${s.items.map(it => {
         const has = it.waste !== null;
         const sold = has ? it.prepared - it.waste : null;
-        const sub = [it.sweetness, has ? money(sold * it.price) : ''].filter(Boolean).join(' · ');
+        const sub = [it.sweetness, it.extra > 0 ? `追加 ${it.extra}` : '', has ? money(sold * it.price) : ''].filter(Boolean).join(' · ');
         return `<div class="irow">
           <div class="iname">${esc(it.name)}${sub ? `<small>${esc(sub)}</small>` : ''}</div>
           <span class="n">${it.prepared}</span>
@@ -429,26 +430,29 @@ function renderSession() {
   if (s.status === '開攤中') {
     const prepared = s.items.reduce((a, i) => a + i.prepared, 0);
     const maxRev = s.items.reduce((a, i) => a + i.prepared * i.price, 0);
+    const extraTotal = s.items.reduce((a, i) => a + (i.extra || 0), 0);
     return header + `
     <div class="hero">
       <div class="hero-label">${esc(s.location)}</div>
       <div class="hero-title">備貨 ${prepared} 杯</div>
-      <div class="hero-sub">全部賣完可達 ${money(maxRev)}</div>
+      <div class="hero-sub">${extraTotal > 0 ? `含追加 ${extraTotal} 杯 · ` : ''}全部賣完可達 ${money(maxRev)}</div>
       <span class="pill">開攤中 · 待填剩餘杯數</span>
     </div>
     ${list}
     <div class="section">
       <button class="btn btn-primary" onclick="go('close-stall')">填寫收攤剩餘</button>
+      <button class="btn btn-secondary" onclick="go('topup')">追加補貨</button>
       <button class="btn btn-secondary" onclick="go('open-stall')">修改開攤資料</button>
     </div>`;
   }
 
   const c = calc(s.items);
+  const extraTotal = s.items.reduce((a, i) => a + (i.extra || 0), 0);
   return header + `
   <div class="hero">
     <div class="hero-label">${esc(s.location)} · 營業額</div>
     <div class="hero-title">${money(c.revenue)}</div>
-    <div class="hero-sub">賣出 ${c.sold} 杯 · 備貨 ${c.prepared} 杯 · 剩餘 ${c.waste} 杯</div>
+    <div class="hero-sub">賣出 ${c.sold} 杯 · 備貨 ${c.prepared} 杯${extraTotal > 0 ? `（含追加 ${extraTotal}）` : ''} · 剩餘 ${c.waste} 杯</div>
   </div>
   <div class="stat-grid">
     <div class="stat">
@@ -489,7 +493,7 @@ function renderOpenStall() {
     return `
     <div class="slot">
       <div class="slot-title">品項 ${i+1}</div>
-      <div class="slot-grid">
+      <div class="slot-grid g3">
         <div class="full">
           <select id="item_${i}" onchange="onItemSelect(${i})">
             <option value="">— 不使用 —</option>
@@ -502,11 +506,15 @@ function renderOpenStall() {
         </div>
         <div>
           <label>備貨（杯）</label>
-          <input type="text" inputmode="numeric" id="qty_${i}" value="${ex ? ex.prepared : ''}" placeholder="0">
+          <input type="text" inputmode="numeric" id="qty_${i}" value="${ex ? ex.prepared - (ex.extra || 0) : ''}" placeholder="0">
         </div>
         <div>
-          <label>剩餘（杯）選填</label>
-          <input type="text" inputmode="numeric" id="rem_${i}" value="${ex && ex.waste !== null && ex.waste !== undefined ? ex.waste : ''}" placeholder="之後再填">
+          <label>追加（杯）</label>
+          <input type="text" inputmode="numeric" id="ext_${i}" value="${ex && ex.extra > 0 ? ex.extra : ''}" placeholder="0">
+        </div>
+        <div>
+          <label>剩餘（杯）</label>
+          <input type="text" inputmode="numeric" id="rem_${i}" value="${ex && ex.waste !== null && ex.waste !== undefined ? ex.waste : ''}" placeholder="選填">
         </div>
       </div>
     </div>`;
@@ -531,7 +539,7 @@ function renderOpenStall() {
   </div>
   <div class="section">
     <div class="section-label">品項與備貨量（最多 ${SLOTS} 項）</div>
-    <div class="hint">${existing && existing.status === '已收攤' ? '剩餘杯數已填寫；全部清空會讓這個場次回到「開攤中」。' : '已經收攤的話，剩餘杯數可以一起填完；全部留空則只記錄開攤。'}</div>
+    <div class="hint">${existing && existing.status === '已收攤' ? '剩餘杯數已填寫；全部清空會讓這個場次回到「開攤中」。追加杯數可在這裡修正。' : '備貨是開攤時帶的杯數，追加是當天中途補貨的總杯數（選填）。已經收攤的話，剩餘杯數可以一起填完；全部留空則只記錄開攤。'}</div>
     ${slots}
     <button class="btn btn-primary" id="submitOpen" onclick="submitOpenStall(this)">${existing ? '儲存' : '確認開攤'}</button>
   </div>`;
@@ -568,12 +576,18 @@ async function submitOpenStall(btn) {
     if (prepared === null) { toast(`「${name}」備貨量請輸入 0 以上的整數`); return; }
     if (prepared === 0) { toast(`「${name}」備貨量需大於 0`); return; }
     if (items.some(it => it.name === name)) { toast(`「${name}」重複選取`); return; }
-    const item = { name, sweetness, prepared };
+    const extRaw = document.getElementById(`ext_${i}`).value.trim();
+    let extra = 0;
+    if (extRaw !== '') {
+      extra = parseNonNegInt(extRaw);
+      if (extra === null) { toast(`「${name}」追加杯數請輸入 0 以上的整數`); return; }
+    }
+    const item = { name, sweetness, prepared, extra };
     const remRaw = document.getElementById(`rem_${i}`).value.trim();
     if (remRaw !== '') {
       const rem = parseNonNegInt(remRaw);
       if (rem === null) { toast(`「${name}」剩餘杯數請輸入 0 以上的整數`); return; }
-      if (rem > prepared) { toast(`「${name}」剩餘杯數需介於 0 到備貨量`); return; }
+      if (rem > prepared + extra) { toast(`「${name}」剩餘杯數需介於 0 到備貨量`); return; }
       item.waste = rem;
       remCount++;
     }
@@ -602,6 +616,91 @@ async function submitOpenStall(btn) {
 }
 
 /* ============================================================
+   TOPUP (追加補貨)
+   ============================================================ */
+function renderTopup() {
+  const s = state.stall;
+  if (!s || !s.found || s.status !== '開攤中') {
+    return `<div class="header"><h1>追加補貨</h1></div><div class="empty"><b>沒有開攤中的場次</b>已收攤的場次，請到「修改開攤／備貨資料」調整追加杯數<button class="btn btn-secondary" onclick="go('session')">返回一日狀態</button></div>`;
+  }
+  const rows = s.items.map((it, i) => `
+    <div class="slot">
+      <div class="slot-title">
+        <span>${esc(it.name)}${it.sweetness ? ` · ${esc(it.sweetness)}` : ''}</span>
+        <em>目前備貨 ${it.prepared} 杯${it.extra > 0 ? `（已追加 ${it.extra}）` : ''}</em>
+      </div>
+      <div class="slot-grid">
+        <div>
+          <label>本次追加（杯）</label>
+          <input type="text" inputmode="numeric" id="add_${i}" placeholder="0" oninput="updateTopup()">
+        </div>
+        <div>
+          <label>追加後備貨</label>
+          <div id="after_${i}" class="preview idle">${it.prepared} 杯</div>
+        </div>
+      </div>
+    </div>`).join('');
+
+  return `
+  <div class="header">
+    <div class="header-row">
+      <span class="back-btn" onclick="go('session')">${BACK} 返回</span>
+      <h1>追加補貨</h1>
+      <span style="min-width:56px"></span>
+    </div>
+    <div class="header-sub">${fmtLong(state.viewDate)} · ${esc(s.location)}</div>
+  </div>
+  <div class="section">
+    <div class="section-label">只填有補貨的品項，其他留空</div>
+    ${rows}
+    <button class="btn btn-primary" id="submitTopup" onclick="submitTopup(this)">確認追加</button>
+  </div>`;
+}
+
+function updateTopup() {
+  state.stall.items.forEach((it, i) => {
+    const raw = document.getElementById(`add_${i}`).value.trim();
+    const el = document.getElementById(`after_${i}`);
+    el.classList.remove('over', 'idle');
+    const v = raw === '' ? 0 : parseNonNegInt(raw);
+    if (v === null) { el.textContent = '數字有誤'; el.classList.add('over'); return; }
+    if (v === 0) { el.textContent = `${it.prepared} 杯`; el.classList.add('idle'); return; }
+    el.textContent = `${it.prepared + v} 杯（+${v}）`;
+  });
+}
+
+async function submitTopup(btn) {
+  const s = state.stall;
+  const items = [];
+  let total = 0;
+  for (let i = 0; i < s.items.length; i++) {
+    const raw = document.getElementById(`add_${i}`).value.trim();
+    if (raw === '') continue;
+    const add = parseNonNegInt(raw);
+    if (add === null) { toast(`「${s.items[i].name}」追加杯數請輸入 0 以上的整數`); return; }
+    if (add === 0) continue;
+    items.push({ name: s.items[i].name, add });
+    total += add;
+  }
+  if (items.length === 0) { toast('請至少填寫一項追加杯數'); return; }
+
+  btn.disabled = true;
+  btn.textContent = '處理中…';
+  try {
+    const res = await apiPost({ action: 'addStock', date: state.viewDate, items });
+    if (res.ok) {
+      await refreshStall();
+      toast(`已追加 ${total} 杯`);
+      go('session');
+      return;
+    }
+    toast(res.error || '操作失敗');
+  } catch(e) { toast('網路錯誤，請重試'); }
+  btn.disabled = false;
+  btn.textContent = '確認追加';
+}
+
+/* ============================================================
    CLOSE STALL (收攤表單：填剩餘杯數)
    ============================================================ */
 function renderCloseStall() {
@@ -614,7 +713,7 @@ function renderCloseStall() {
     <div class="slot">
       <div class="slot-title">
         <span>${esc(it.name)}${it.sweetness ? ` · ${esc(it.sweetness)}` : ''}</span>
-        <em>備貨 ${it.prepared} 杯</em>
+        <em>備貨 ${it.prepared} 杯${it.extra > 0 ? `（含追加 ${it.extra}）` : ''}</em>
       </div>
       <div class="slot-grid">
         <div>
@@ -837,7 +936,7 @@ function renderItemList(recs) {
       <div class="prow ihead" style="padding:8px 16px"><span>場次</span><span class="n">備貨</span><span class="n">賣出</span><span class="n">剩餘</span></div>
       ${rows.map(r => {
         const has = r.waste !== null;
-        const sub = [esc(r.location), r.sweetness ? esc(r.sweetness) : ''].filter(Boolean).join(' · ');
+        const sub = [esc(r.location), r.sweetness ? esc(r.sweetness) : '', r.extra > 0 ? `追加 ${r.extra}` : ''].filter(Boolean).join(' · ');
         return `<div class="prow">
           <div>${fmtShortY(r.date)}<small>${sub}</small></div>
           <span class="n">${r.prepared}</span>
