@@ -1,6 +1,6 @@
 # 出攤管理系統 — Code & Architecture Review Handoff
 
-> 產生日期：2026-11-05 ｜ 分支：`main` ｜ 程式碼 commit：`38b7a84`｜GAS 部署 @45
+> 產生日期：2026-11-05 ｜ 分支：`main` ｜ 程式碼 commit：`a5fcde8`｜GAS 部署 @46
 > 用途：交給另一個 AI 做全局架構與程式碼雙重檢核。第 4 節已嵌入全部原始碼（共 2 個程式檔 + 2 個設定檔），不需另外取得檔案。
 
 ---
@@ -20,11 +20,11 @@
 ### 核心商業邏輯
 | 指標 | 公式 |
 |---|---|
-| 賣出杯數 | `備貨 − 剩餘` |
+| 賣出杯數 | `備貨總量 − 剩餘`（備貨總量＝原備貨＋當日追加） |
 | 報廢杯數 | ＝ 剩餘杯數（使用者收攤時數剩下幾杯，直接填入） |
-| 營業額 | `Σ (備貨 − 剩餘) × 售價` |
+| 營業額 | `Σ (備貨總量 − 剩餘) × 售價` |
 | 報廢成本 | `Σ 剩餘 × 成本價` |
-| 毛利 | `營業額 − Σ 備貨 × 成本價`（扣除全部備貨成本，不只是賣出的） |
+| 毛利 | `營業額 − Σ 備貨總量 × 成本價`（扣除全部備貨成本含追加，不只是賣出的） |
 
 售價／成本在每次開攤寫入時以**快照**存進出攤紀錄的 H、I 欄（`售價快照`、`成本快照`）；讀取時優先使用該列快照，只有舊資料（H、I 空白）才退回以品項名稱查「品項設定」的現行價格。因此日後調價、改名、刪除品項都不會回溯改動已寫入快照的歷史金額。僅對「已填剩餘杯數」的列計算金額。
 
@@ -32,8 +32,9 @@
 1. **一日狀態**：可切換任意日期（前後一天／日期選擇器）。顯示當日場次：未開攤（可開攤或補登）／開攤中（備貨列表，可填收攤、可修改開攤）／已收攤（營業額、報廢成本、毛利、各品項明細、可修改剩餘杯數）。
 2. **開攤表單**：選地點、最多 4 個品項（品項、甜度、備貨杯數）；另有選填的「剩餘杯數」，補登時可一次填完，全部留空則只記錄開攤。
 3. **收攤表單**：每品項填剩餘杯數，即時預覽賣出杯數與營業額。
-4. **紀錄**：區間（30/90 天、全部、自訂）＋地點篩選；合計、每場營業額長條圖（最近 16 場）、各場次列表（點擊跳到該日）、品項配貨（每品項每場的實際備貨／賣出／剩餘，不做平均或自動建議）。
-5. **設定**：品項管理（名稱、售價、成本、甜度選項）、地點管理。
+4. **追加補貨**：開攤中若某品項提早賣完、請店裡補貨，可在「追加補貨」畫面填本次追加杯數（累加到該品項的追加杯數）；備貨總量隨之增加，營業額／毛利／報廢上限都以總量計算。已收攤或補登時，可在「修改開攤／備貨資料」直接修正追加杯數。
+5. **紀錄**：區間（30/90 天、全部、自訂）＋地點篩選；合計、每場營業額長條圖（最近 16 場）、各場次列表（點擊跳到該日）、品項配貨（每品項每場的實際備貨／賣出／剩餘，不做平均或自動建議）。
+6. **設定**：品項管理（名稱、售價、成本、甜度選項）、地點管理。
 
 ### Tech Stack
 | 層 | 技術 | 備註 |
@@ -42,7 +43,7 @@
 | 前端託管 | GitHub Pages | `https://berniekang2003.github.io/tea-shop-system/`，push 到 `main` 後自動部署 |
 | 後端 | Google Apps Script Web App（V8 runtime） | `executeAs: USER_DEPLOYING`, `access: ANYONE_ANONYMOUS`，時區 `Asia/Taipei` |
 | 資料庫 | Google Sheets（綁定在 GAS 專案的試算表） | 3 個工作表，見第 3 節 |
-| 部署工具 | clasp 3.3.0 | `.clasp.json` 的 `rootDir` 指向 `gas/`；線上部署 ID 固定，目前 @45 |
+| 部署工具 | clasp 3.3.0 | `.clasp.json` 的 `rootDir` 指向 `gas/`；線上部署 ID 固定，目前 @46 |
 | 其他 | 無 CI、無測試框架、無 linter | |
 
 GAS 部署：`AKfycbyKrS_BEKBj7Y2ZGq6iz4996VXMAApjxsNwaHFysmmjzsDjWi_L8p7O4LwM-8yJP_w-FQ`（@44）。前端內寫死此 `/exec` 網址。無任何 `.env` 或機密檔；唯一的「憑證」概念是這個公開網址本身（見第 5、6 節）。
@@ -53,9 +54,9 @@ GAS 部署：`AKfycbyKrS_BEKBj7Y2ZGq6iz4996VXMAApjxsNwaHFysmmjzsDjWi_L8p7O4LwM-8
 
 ```
 分店叫茶系統/
-├── index.html            # 整個前端：CSS 設計 token、狀態物件、7 個畫面的 render 函式、API 呼叫（約 1040 行）
+├── index.html            # 整個前端：CSS 設計 token、狀態物件、7 個畫面的 render 函式、API 呼叫（約 1130 行）
 ├── gas/
-│   ├── 程式碼.js          # 整個後端：doGet/doPost 路由 + Sheets CRUD + 統計（約 340 行）；檔名須與雲端一致，否則 clasp push 會產生重複檔案
+│   ├── 程式碼.js          # 整個後端：doGet/doPost 路由 + Sheets CRUD + 統計（約 370 行）；檔名須與雲端一致，否則 clasp push 會產生重複檔案
 │   └── appsscript.json   # GAS manifest：V8、Asia/Taipei、webapp 匿名存取設定
 ├── .clasp.json           # clasp 專案連結（scriptId + rootDir=gas）
 ├── .claude/
@@ -82,15 +83,16 @@ GAS 部署：`AKfycbyKrS_BEKBj7Y2ZGq6iz4996VXMAApjxsNwaHFysmmjzsDjWi_L8p7O4LwM-8
 POST 刻意不設 `Content-Type`（瀏覽器送 `text/plain`），避免 CORS preflight（GAS 不支援 OPTIONS）。
 
 ### 資料表 Schema（皆從第 2 列起為資料，第 1 列為標題，需手動建立）
-| 工作表 | A | B | C | D | E | F | G | H | I |
-|---|---|---|---|---|---|---|---|---|---|
-| 品項設定 | 名稱（唯一鍵） | 售價 | 成本 | 甜度選項（逗號分隔） | | | | | |
-| 地點設定 | 地點名稱 | | | | | | | | |
-| 出攤紀錄 | 日期 `yyyyMMdd` | 地點 | 品項名稱 | 甜度 | 備貨 | 剩餘/報廢（空＝尚未收攤） | 狀態 `開攤中`/`已收攤` | 售價快照 | 成本快照 |
+| 工作表 | A | B | C | D | E | F | G | H | I | J |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 品項設定 | 名稱（唯一鍵） | 售價 | 成本 | 甜度選項（逗號分隔） | | | | | | |
+| 地點設定 | 地點名稱 | | | | | | | | | |
+| 出攤紀錄 | 日期 `yyyyMMdd` | 地點 | 品項名稱 | 甜度 | 原備貨 | 剩餘/報廢（空＝尚未收攤） | 狀態 `開攤中`/`已收攤` | 售價快照 | 成本快照 | 追加杯數（累計） |
 
 - 「場次」沒有獨立表／主鍵：**一個場次＝同一個日期的所有列**（同日期的列在插入時連續）。同一日期只能有一場。
 - 場次的「地點」取該日第一列、「狀態」取該日最後一列的 G 欄。
-- H、I 欄為舊資料所無：舊列（H、I 空白）讀取時退回品項設定的現行價格；欄數不足 9 的工作表在讀取時以空字串補齊、寫入時自動補欄並補上 H1/I1 表頭。
+- H、I、J 欄為舊資料所無：H、I 空白的舊列讀取時退回品項設定的現行價格；J 空白視為追加 0。欄數不足 10 的工作表在讀取時以空字串補齊、寫入時自動補欄並補上 H1/I1/J1 表頭（已有自訂表頭不覆寫）。
+- **備貨總量＝E（原備貨）＋J（追加）**。API 回傳的 `prepared` 是總量，`extra` 是 J；前端以 `prepared − extra` 還原原備貨給表單編輯。
 - 寫入文字欄位（地點、品項、甜度）時，開頭為 `=`、`+`、`-`、`@`、Tab、CR 者會加上單引號前綴（`safeText`）以防公式注入。
 
 ### API（單一 `/exec` 端點，以 `action` 分派）
@@ -99,20 +101,22 @@ POST 刻意不設 `Content-Type`（瀏覽器送 `text/plain`），避免 CORS pr
 | GET | `getInit` | `date` | `{items,locations,stall}`：一次回傳品項、地點與該日場次（前端啟動用；單次執行、共用一次品項讀取） |
 | GET | `getItems` | — | `{items:[{name,price,cost,sweetnesses[]}]}` |
 | GET | `getLocations` | — | `{locations:[string]}` |
-| GET | `getStallData` | `date`(yyyymmdd) | `{found:false}` 或 `{found,date,location,status,items:[{name,sweetness,prepared,waste或null,price,cost}]}` |
+| GET | `getStallData` | `date`(yyyymmdd) | `{found:false}` 或 `{found,date,location,status,items:[{name,sweetness,prepared,extra,waste或null,price,cost}]}`（`prepared`＝備貨總量，`extra`＝追加杯數） |
 | GET | `getHistory` | `startDate?`,`endDate?` | `{records:[{date,location,status,items[],revenue,wasteCost,profit,totalPrepared,totalWaste}]}`（日期新→舊；items 的 price/cost 為快照優先） |
 | POST | `saveItem` | `originalName,name,price,cost,sweetnesses[]` | `{ok}`；改名時同步更新出攤紀錄 C 欄；改成已存在的名稱回 `{error}` |
 | POST | `deleteItem` / `saveLocation` / `deleteLocation` | `name` | `{ok}` |
-| POST | `openStall` | `date,location,items[{name,sweetness,prepared,waste?}]` | 先驗證（空品項／重複／非整數一律在刪除前拒絕），再批次刪除該日期的舊列（連續區段合併 `deleteRows`），沿用同日舊列的價格快照、新品項取現價（查無則用前端傳入或 0），寫入 9 欄；若**所有**品項都帶有效 `waste` 則直接寫入 F 欄並設狀態 `已收攤`（單一請求完成補登），否則 F 空、狀態 `開攤中` |
-| POST | `closeStall` | `date,items[{name,waste}]` | 讀 A~G 後在記憶體更新，**一次** `setValues` 寫回 F~G；找不到品項、waste 非整數或超過備貨會整批拒絕 |
+| POST | `openStall` | `date,location,items[{name,sweetness,prepared,extra?,waste?}]` | 先驗證（空品項／重複／非整數一律在刪除前拒絕），再批次刪除該日期的舊列（連續區段合併 `deleteRows`），沿用同日舊列的價格快照與追加杯數（`extra` 有帶才覆寫，帶 0 即清除）、新品項取現價（查無則用前端傳入或 0），寫入 9 欄；若**所有**品項都帶有效 `waste` 則直接寫入 F 欄並設狀態 `已收攤`（單一請求完成補登），否則 F 空、狀態 `開攤中` |
+| POST | `closeStall` | `date,items[{name,waste}]` | 讀 A~G 後在記憶體更新，**一次** `setValues` 寫回 F~G；找不到品項、waste 非整數或超過備貨總量（原備貨＋追加）會整批拒絕 |
+| POST | `addStock` | `date,items[{name,add}]` | 開攤中追加補貨：把每項 `add`（正整數）累加到 J 欄，整欄一次 `setValues`；已收攤、找不到品項、重複、非正整數整批拒絕（不部分寫入） |
 
 錯誤一律以 HTTP 200 + `{error: "..."}` 回傳（GAS 無法自訂狀態碼）。所有 POST 先以 `LockService.getScriptLock().waitLock(15000)` 取得腳本鎖（逾時回「系統忙碌中」），`finally` 釋放；GET 不加鎖。
 
 ### 前端狀態管理
 - 單一全域 `state` 物件（目前畫面、品項、地點、`viewDate`、`stall`、`records`、篩選條件等），**`render()` 依 `state.screen` 重新產生整個 `#app` 的 innerHTML**，事件以 inline `onclick`/`onchange` 綁定（全域函式）。
-- 7 個畫面：`session`（一日狀態）、`open-stall`、`close-stall`、`records`、`settings`、`edit-item`、`add-location`；底部 3 個 tab（一日狀態／紀錄／設定）。
-- 表單畫面的輸入值**不存進 state**，送出時直接讀 DOM；因此任何在表單畫面期間觸發的 `render()` 都會清掉使用者已輸入的內容。對策：非同步載入完成後只在 `!isFormScreen()`（非 `open-stall`/`close-stall`/`edit-item`/`add-location`）時才 `render()`；`window._editSweets` 只在 `editItem()`/`newItem()` 進入時初始化。
+- 8 個畫面：`session`（一日狀態）、`open-stall`、`close-stall`、`topup`（追加補貨）、`records`、`settings`、`edit-item`、`add-location`；底部 3 個 tab（一日狀態／紀錄／設定）。
+- 表單畫面的輸入值**不存進 state**，送出時直接讀 DOM；因此任何在表單畫面期間觸發的 `render()` 都會清掉使用者已輸入的內容。對策：非同步載入完成後只在 `!isFormScreen()`（非 `open-stall`/`close-stall`/`topup`/`edit-item`/`add-location`）時才 `render()`；`window._editSweets` 只在 `editItem()`/`newItem()` 進入時初始化。
 - 數字輸入一律經 `parseNonNegInt`（`/^\d+$/`，只接受半形非負整數）；收攤表單空白不再視為 0。
+- 追加：`topup` 畫面僅在場次為開攤中時可用，送出 `addStock`。`calc()`、收攤上限與預覽直接使用 `prepared`（已是總量）；開攤表單三欄（備貨＝`prepared−extra`、追加＝`extra`、剩餘），送出時一律帶 `extra`（空白＝0）。
 - 啟動時呼叫 `getInit`（1 個請求）；若回應沒有 `items`（舊版 GAS）則退回原本 3 個並發請求。
 - 所有統計（營業額、毛利、圖表）在**前端**由 `calc(items)` 以 API 回傳的 price/cost（已是快照優先）即時計算；`getHistory` 回傳的 `revenue/wasteCost/profit` 目前前端未使用，兩邊公式需保持一致。
 - 資料流範例（收攤）：`close-stall` 表單 → `submitCloseStall()` 嚴格驗證 → `POST closeStall` → `refreshStall()` 重新 GET 當日資料並使 `state.records=null`（下次進紀錄頁重抓）→ `go('session')` → `render()`。
@@ -125,7 +129,7 @@ POST 刻意不設 `Content-Type`（瀏覽器送 `text/plain`），避免 CORS pr
 ### 4.1 `gas/程式碼.js`（後端，完整）
 ```javascript
 const SS = SpreadsheetApp.getActiveSpreadsheet();
-const REC_COLS = 9; // 出攤紀錄 A~I：日期,地點,品項,甜度,備貨,剩餘,狀態,售價快照,成本快照
+const REC_COLS = 10; // 出攤紀錄 A~J：日期,地點,品項,甜度,備貨,剩餘,狀態,售價快照,成本快照,追加杯數
 
 function doGet(e) {
   try {
@@ -157,6 +161,7 @@ function doPost(e) {
     if (action === 'deleteLocation') return deleteLocation(data);
     if (action === 'openStall')      return openStall(data);
     if (action === 'closeStall')     return closeStall(data);
+    if (action === 'addStock')       return addStock(data);
     return respond({ error: '未知的 action' });
   } catch(err) {
     return respond({ error: err.message });
@@ -229,26 +234,31 @@ function readLocations() {
   return sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getValues().filter(r => r[0]).map(r => toStr(r[0]));
 }
 
-// 讀出攤紀錄 A~I；欄數不足 9 的舊表以空字串補齊
-function readRecords() {
-  const sheet = SS.getSheetByName('出攤紀錄');
-  if (!sheet || sheet.getLastRow() <= 1) return { sheet, rows: [] };
+// 讀出攤紀錄 A~J；欄數不足的舊表以空字串補齊
+function readRecRange(sheet) {
   const cols = Math.min(REC_COLS, Math.max(sheet.getMaxColumns(), 7));
-  const rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, cols).getValues().map(r => {
+  return sheet.getRange(2, 1, sheet.getLastRow() - 1, cols).getValues().map(r => {
     while (r.length < REC_COLS) r.push('');
     return r;
   });
-  return { sheet, rows };
+}
+
+function readRecords() {
+  const sheet = SS.getSheetByName('出攤紀錄');
+  if (!sheet || sheet.getLastRow() <= 1) return { sheet, rows: [] };
+  return { sheet, rows: readRecRange(sheet) };
 }
 
 // 優先使用該列的價格快照；舊資料（H、I 欄空白）退回品項設定的現行價格
 function rowToItem(r, priceMap) {
   const name = toStr(r[2]);
   const pm = priceMap[name] || { price: 0, cost: 0 };
+  const extra = num(r[9], 0);
   return {
     name,
     sweetness: toStr(r[3]),
-    prepared: Number(r[4]) || 0,
+    prepared: (Number(r[4]) || 0) + extra,   // 備貨總量＝原備貨＋追加
+    extra,
     waste: hasVal(r[5]) ? Number(r[5]) : null,
     price: num(r[7], pm.price),
     cost: num(r[8], pm.cost)
@@ -367,13 +377,13 @@ function deleteLocation(data) {
 }
 
 /* ---------- 出攤 ---------- */
-// 欄數不足 9 時補欄；表頭 H、I 空白時自動補上
+// 欄數不足 10 時補欄；表頭 H、I、J 空白時自動補上
 function ensureRecCols(sheet) {
   const max = sheet.getMaxColumns();
   if (max < REC_COLS) sheet.insertColumnsAfter(max, REC_COLS - max);
   if (sheet.getLastRow() >= 1) {
-    const h = sheet.getRange(1, 8, 1, 2).getValues()[0];
-    if (!h[0] || !h[1]) sheet.getRange(1, 8, 1, 2).setValues([['售價快照', '成本快照']]);
+    const h = sheet.getRange(1, 8, 1, 3).getValues()[0];
+    if (!h[0] || !h[1] || !h[2]) sheet.getRange(1, 8, 1, 3).setValues([[h[0] || '售價快照', h[1] || '成本快照', h[2] || '追加杯數']]);
   }
 }
 
@@ -406,27 +416,31 @@ function openStall(data) {
     if (seen[name]) return respond({ error: `「${name}」重複` });
     seen[name] = true;
     if (!isNonNegInt(Number(it.prepared)) || Number(it.prepared) <= 0) return respond({ error: `「${name}」備貨量需為大於 0 的整數` });
+    if (hasVal(it.extra) && !isNonNegInt(Number(it.extra))) return respond({ error: `「${name}」追加杯數需為 0 以上的整數` });
   }
+
+  // 同日舊列：記下價格快照與追加杯數（呼叫端未帶 extra 時沿用）
+  const oldSnap = {}, oldExtra = {}, toDelete = [];
+  readRecords().rows.forEach((r, i) => {
+    if (toStr(r[0]) !== date) return;
+    toDelete.push(i + 2);
+    const name = toStr(r[2]);
+    if (hasVal(r[7]) && hasVal(r[8])) oldSnap[name] = { price: Number(r[7]), cost: Number(r[8]) };
+    oldExtra[name] = num(r[9], 0);
+  });
+  const extraOf = it => hasVal(it.extra) ? Number(it.extra) : (oldExtra[String(it.name).trim()] || 0);
+
   const hasWaste = it => it.waste !== undefined && it.waste !== null && it.waste !== '';
   const allWaste = items.every(hasWaste);
   if (allWaste) {
     for (const it of items) {
       const w = Number(it.waste);
-      if (!isNonNegInt(w) || w > Number(it.prepared)) return respond({ error: `「${it.name}」剩餘杯數需介於 0 到備貨量` });
+      if (!isNonNegInt(w) || w > Number(it.prepared) + extraOf(it)) return respond({ error: `「${it.name}」剩餘杯數需介於 0 到備貨量` });
     }
   }
 
   ensureRecCols(sheet);
   const priceMap = getPriceMap();
-  const oldSnap = {};
-  const toDelete = [];
-  if (sheet.getLastRow() > 1) {
-    sheet.getRange(2, 1, sheet.getLastRow() - 1, REC_COLS).getValues().forEach((r, i) => {
-      if (toStr(r[0]) !== date) return;
-      toDelete.push(i + 2);
-      if (hasVal(r[7]) && hasVal(r[8])) oldSnap[toStr(r[2])] = { price: Number(r[7]), cost: Number(r[8]) };
-    });
-  }
   deleteRowRuns(sheet, toDelete);
 
   const newRows = items.map(it => {
@@ -437,7 +451,8 @@ function openStall(data) {
       Number(it.prepared),
       allWaste ? Number(it.waste) : '',
       allWaste ? '已收攤' : '開攤中',
-      snap.price, snap.cost
+      snap.price, snap.cost,
+      extraOf(it)
     ];
   });
   sheet.getRange(sheet.getLastRow() + 1, 1, newRows.length, REC_COLS).setValues(newRows);
@@ -449,18 +464,44 @@ function closeStall(data) {
   if (!sheet || sheet.getLastRow() <= 1) return respond({ error: '無出攤紀錄' });
   const date = normDate(data.date);
   const items = Array.isArray(data.items) ? data.items : [];
-  const n = sheet.getLastRow() - 1;
-  const rows = sheet.getRange(2, 1, n, 7).getValues();
+  const rows = readRecRange(sheet);
   const fg = rows.map(r => [r[5], r[6]]);
 
   for (const it of items) {
     const waste = Number(it.waste);
     const i = rows.findIndex(r => toStr(r[0]) === date && toStr(r[2]) === it.name);
     if (i < 0) return respond({ error: `找不到「${it.name}」的開攤紀錄` });
-    if (!isNonNegInt(waste) || waste > Number(rows[i][4])) return respond({ error: `「${it.name}」剩餘杯數需介於 0 到備貨量` });
+    const total = Number(rows[i][4]) + num(rows[i][9], 0);
+    if (!isNonNegInt(waste) || waste > total) return respond({ error: `「${it.name}」剩餘杯數需介於 0 到備貨量` });
     fg[i] = [waste, '已收攤'];
   }
-  sheet.getRange(2, 6, n, 2).setValues(fg);
+  sheet.getRange(2, 6, rows.length, 2).setValues(fg);
+  return respond({ ok: true });
+}
+
+// 開攤中追加補貨：把本次追加杯數累加到 J 欄，整欄一次寫回
+function addStock(data) {
+  const sheet = SS.getSheetByName('出攤紀錄');
+  if (!sheet || sheet.getLastRow() <= 1) return respond({ error: '無出攤紀錄' });
+  const date = normDate(data.date);
+  const items = Array.isArray(data.items) ? data.items : [];
+  if (items.length === 0) return respond({ error: '請至少填寫一項追加數量' });
+
+  ensureRecCols(sheet);
+  const rows = readRecRange(sheet);
+  const j = rows.map(r => [r[9]]);
+  const seen = {};
+  for (const it of items) {
+    const add = Number(it.add);
+    if (!isNonNegInt(add) || add <= 0) return respond({ error: `「${it.name}」追加杯數需為大於 0 的整數` });
+    if (seen[it.name]) return respond({ error: `「${it.name}」重複` });
+    seen[it.name] = true;
+    const i = rows.findIndex(r => toStr(r[0]) === date && toStr(r[2]) === it.name);
+    if (i < 0) return respond({ error: `找不到「${it.name}」的開攤紀錄` });
+    if (toStr(rows[i][6]) === '已收攤') return respond({ error: '已收攤的場次請用「修改開攤／備貨資料」調整追加量' });
+    j[i] = [num(j[i][0], 0) + add];
+  }
+  sheet.getRange(2, 10, rows.length, 1).setValues(j);
   return respond({ ok: true });
 }
 ```
@@ -620,6 +661,7 @@ function closeStall(data) {
     .slot-title { font-size: 13px; font-weight: 700; color: var(--ink2); margin-bottom: 10px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
     .slot-title em { font-style: normal; font-weight: 400; font-size: 12px; color: var(--ink3); }
     .slot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .slot-grid.g3 { grid-template-columns: 1fr 1fr 1fr; }
     .slot-grid .full { grid-column: 1 / -1; }
     .slot-grid label { font-size: 12px; color: var(--ink2); display: block; margin-bottom: 5px; }
     .preview { padding: 11px 13px; background: var(--accent-soft); color: var(--accent); border-radius: 10px; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
@@ -729,7 +771,7 @@ function fmtShort(s) { return `${+s.slice(4,6)}/${+s.slice(6,8)}`; }
 function fmtShortY(s) { return (s.slice(0,4) === String(new Date().getFullYear()) ? '' : s.slice(2,4) + '/') + fmtShort(s); }
 function money(n) { return (n < 0 ? '-$' : '$') + Math.abs(Math.round(n)).toLocaleString(); }
 function parseNonNegInt(str) { const s = String(str ?? '').trim(); if (!/^\d+$/.test(s)) return null; return parseInt(s, 10); }
-const isFormScreen = () => ['open-stall', 'close-stall', 'edit-item', 'add-location'].includes(state.screen);
+const isFormScreen = () => ['open-stall', 'close-stall', 'topup', 'edit-item', 'add-location'].includes(state.screen);
 
 function toast(msg) {
   const t = document.getElementById('toast');
@@ -821,7 +863,7 @@ function render() {
   const app = document.getElementById('app');
   if (!state.loaded) { app.innerHTML = '<div class="loading">載入中…</div>'; return; }
   const views = {
-    'session': renderSession, 'open-stall': renderOpenStall, 'close-stall': renderCloseStall,
+    'session': renderSession, 'open-stall': renderOpenStall, 'close-stall': renderCloseStall, 'topup': renderTopup,
     'records': renderRecords, 'settings': renderSettings, 'edit-item': renderEditItem, 'add-location': renderAddLocation
   };
   app.innerHTML = views[state.screen]() + renderNavbar();
@@ -836,7 +878,7 @@ function renderNavbar() {
     { id: 'records', label: '紀錄', icon: '<path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/>' },
     { id: 'settings', label: '設定', icon: '<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>' }
   ];
-  const active = ['session','open-stall','close-stall'].includes(state.screen) ? 'session'
+  const active = ['session','open-stall','close-stall','topup'].includes(state.screen) ? 'session'
                : state.screen === 'records' ? 'records' : 'settings';
   return `<nav class="nav">${tabs.map(t => `
     <div class="nav-tab ${active===t.id?'active':''}" onclick="go('${t.id}')">
@@ -906,7 +948,7 @@ function renderSession() {
       ${s.items.map(it => {
         const has = it.waste !== null;
         const sold = has ? it.prepared - it.waste : null;
-        const sub = [it.sweetness, has ? money(sold * it.price) : ''].filter(Boolean).join(' · ');
+        const sub = [it.sweetness, it.extra > 0 ? `追加 ${it.extra}` : '', has ? money(sold * it.price) : ''].filter(Boolean).join(' · ');
         return `<div class="irow">
           <div class="iname">${esc(it.name)}${sub ? `<small>${esc(sub)}</small>` : ''}</div>
           <span class="n">${it.prepared}</span>
@@ -920,26 +962,29 @@ function renderSession() {
   if (s.status === '開攤中') {
     const prepared = s.items.reduce((a, i) => a + i.prepared, 0);
     const maxRev = s.items.reduce((a, i) => a + i.prepared * i.price, 0);
+    const extraTotal = s.items.reduce((a, i) => a + (i.extra || 0), 0);
     return header + `
     <div class="hero">
       <div class="hero-label">${esc(s.location)}</div>
       <div class="hero-title">備貨 ${prepared} 杯</div>
-      <div class="hero-sub">全部賣完可達 ${money(maxRev)}</div>
+      <div class="hero-sub">${extraTotal > 0 ? `含追加 ${extraTotal} 杯 · ` : ''}全部賣完可達 ${money(maxRev)}</div>
       <span class="pill">開攤中 · 待填剩餘杯數</span>
     </div>
     ${list}
     <div class="section">
       <button class="btn btn-primary" onclick="go('close-stall')">填寫收攤剩餘</button>
+      <button class="btn btn-secondary" onclick="go('topup')">追加補貨</button>
       <button class="btn btn-secondary" onclick="go('open-stall')">修改開攤資料</button>
     </div>`;
   }
 
   const c = calc(s.items);
+  const extraTotal = s.items.reduce((a, i) => a + (i.extra || 0), 0);
   return header + `
   <div class="hero">
     <div class="hero-label">${esc(s.location)} · 營業額</div>
     <div class="hero-title">${money(c.revenue)}</div>
-    <div class="hero-sub">賣出 ${c.sold} 杯 · 備貨 ${c.prepared} 杯 · 剩餘 ${c.waste} 杯</div>
+    <div class="hero-sub">賣出 ${c.sold} 杯 · 備貨 ${c.prepared} 杯${extraTotal > 0 ? `（含追加 ${extraTotal}）` : ''} · 剩餘 ${c.waste} 杯</div>
   </div>
   <div class="stat-grid">
     <div class="stat">
@@ -980,7 +1025,7 @@ function renderOpenStall() {
     return `
     <div class="slot">
       <div class="slot-title">品項 ${i+1}</div>
-      <div class="slot-grid">
+      <div class="slot-grid g3">
         <div class="full">
           <select id="item_${i}" onchange="onItemSelect(${i})">
             <option value="">— 不使用 —</option>
@@ -993,11 +1038,15 @@ function renderOpenStall() {
         </div>
         <div>
           <label>備貨（杯）</label>
-          <input type="text" inputmode="numeric" id="qty_${i}" value="${ex ? ex.prepared : ''}" placeholder="0">
+          <input type="text" inputmode="numeric" id="qty_${i}" value="${ex ? ex.prepared - (ex.extra || 0) : ''}" placeholder="0">
         </div>
         <div>
-          <label>剩餘（杯）選填</label>
-          <input type="text" inputmode="numeric" id="rem_${i}" value="${ex && ex.waste !== null && ex.waste !== undefined ? ex.waste : ''}" placeholder="之後再填">
+          <label>追加（杯）</label>
+          <input type="text" inputmode="numeric" id="ext_${i}" value="${ex && ex.extra > 0 ? ex.extra : ''}" placeholder="0">
+        </div>
+        <div>
+          <label>剩餘（杯）</label>
+          <input type="text" inputmode="numeric" id="rem_${i}" value="${ex && ex.waste !== null && ex.waste !== undefined ? ex.waste : ''}" placeholder="選填">
         </div>
       </div>
     </div>`;
@@ -1022,7 +1071,7 @@ function renderOpenStall() {
   </div>
   <div class="section">
     <div class="section-label">品項與備貨量（最多 ${SLOTS} 項）</div>
-    <div class="hint">${existing && existing.status === '已收攤' ? '剩餘杯數已填寫；全部清空會讓這個場次回到「開攤中」。' : '已經收攤的話，剩餘杯數可以一起填完；全部留空則只記錄開攤。'}</div>
+    <div class="hint">${existing && existing.status === '已收攤' ? '剩餘杯數已填寫；全部清空會讓這個場次回到「開攤中」。追加杯數可在這裡修正。' : '備貨是開攤時帶的杯數，追加是當天中途補貨的總杯數（選填）。已經收攤的話，剩餘杯數可以一起填完；全部留空則只記錄開攤。'}</div>
     ${slots}
     <button class="btn btn-primary" id="submitOpen" onclick="submitOpenStall(this)">${existing ? '儲存' : '確認開攤'}</button>
   </div>`;
@@ -1059,12 +1108,18 @@ async function submitOpenStall(btn) {
     if (prepared === null) { toast(`「${name}」備貨量請輸入 0 以上的整數`); return; }
     if (prepared === 0) { toast(`「${name}」備貨量需大於 0`); return; }
     if (items.some(it => it.name === name)) { toast(`「${name}」重複選取`); return; }
-    const item = { name, sweetness, prepared };
+    const extRaw = document.getElementById(`ext_${i}`).value.trim();
+    let extra = 0;
+    if (extRaw !== '') {
+      extra = parseNonNegInt(extRaw);
+      if (extra === null) { toast(`「${name}」追加杯數請輸入 0 以上的整數`); return; }
+    }
+    const item = { name, sweetness, prepared, extra };
     const remRaw = document.getElementById(`rem_${i}`).value.trim();
     if (remRaw !== '') {
       const rem = parseNonNegInt(remRaw);
       if (rem === null) { toast(`「${name}」剩餘杯數請輸入 0 以上的整數`); return; }
-      if (rem > prepared) { toast(`「${name}」剩餘杯數需介於 0 到備貨量`); return; }
+      if (rem > prepared + extra) { toast(`「${name}」剩餘杯數需介於 0 到備貨量`); return; }
       item.waste = rem;
       remCount++;
     }
@@ -1093,6 +1148,91 @@ async function submitOpenStall(btn) {
 }
 
 /* ============================================================
+   TOPUP (追加補貨)
+   ============================================================ */
+function renderTopup() {
+  const s = state.stall;
+  if (!s || !s.found || s.status !== '開攤中') {
+    return `<div class="header"><h1>追加補貨</h1></div><div class="empty"><b>沒有開攤中的場次</b>已收攤的場次，請到「修改開攤／備貨資料」調整追加杯數<button class="btn btn-secondary" onclick="go('session')">返回一日狀態</button></div>`;
+  }
+  const rows = s.items.map((it, i) => `
+    <div class="slot">
+      <div class="slot-title">
+        <span>${esc(it.name)}${it.sweetness ? ` · ${esc(it.sweetness)}` : ''}</span>
+        <em>目前備貨 ${it.prepared} 杯${it.extra > 0 ? `（已追加 ${it.extra}）` : ''}</em>
+      </div>
+      <div class="slot-grid">
+        <div>
+          <label>本次追加（杯）</label>
+          <input type="text" inputmode="numeric" id="add_${i}" placeholder="0" oninput="updateTopup()">
+        </div>
+        <div>
+          <label>追加後備貨</label>
+          <div id="after_${i}" class="preview idle">${it.prepared} 杯</div>
+        </div>
+      </div>
+    </div>`).join('');
+
+  return `
+  <div class="header">
+    <div class="header-row">
+      <span class="back-btn" onclick="go('session')">${BACK} 返回</span>
+      <h1>追加補貨</h1>
+      <span style="min-width:56px"></span>
+    </div>
+    <div class="header-sub">${fmtLong(state.viewDate)} · ${esc(s.location)}</div>
+  </div>
+  <div class="section">
+    <div class="section-label">只填有補貨的品項，其他留空</div>
+    ${rows}
+    <button class="btn btn-primary" id="submitTopup" onclick="submitTopup(this)">確認追加</button>
+  </div>`;
+}
+
+function updateTopup() {
+  state.stall.items.forEach((it, i) => {
+    const raw = document.getElementById(`add_${i}`).value.trim();
+    const el = document.getElementById(`after_${i}`);
+    el.classList.remove('over', 'idle');
+    const v = raw === '' ? 0 : parseNonNegInt(raw);
+    if (v === null) { el.textContent = '數字有誤'; el.classList.add('over'); return; }
+    if (v === 0) { el.textContent = `${it.prepared} 杯`; el.classList.add('idle'); return; }
+    el.textContent = `${it.prepared + v} 杯（+${v}）`;
+  });
+}
+
+async function submitTopup(btn) {
+  const s = state.stall;
+  const items = [];
+  let total = 0;
+  for (let i = 0; i < s.items.length; i++) {
+    const raw = document.getElementById(`add_${i}`).value.trim();
+    if (raw === '') continue;
+    const add = parseNonNegInt(raw);
+    if (add === null) { toast(`「${s.items[i].name}」追加杯數請輸入 0 以上的整數`); return; }
+    if (add === 0) continue;
+    items.push({ name: s.items[i].name, add });
+    total += add;
+  }
+  if (items.length === 0) { toast('請至少填寫一項追加杯數'); return; }
+
+  btn.disabled = true;
+  btn.textContent = '處理中…';
+  try {
+    const res = await apiPost({ action: 'addStock', date: state.viewDate, items });
+    if (res.ok) {
+      await refreshStall();
+      toast(`已追加 ${total} 杯`);
+      go('session');
+      return;
+    }
+    toast(res.error || '操作失敗');
+  } catch(e) { toast('網路錯誤，請重試'); }
+  btn.disabled = false;
+  btn.textContent = '確認追加';
+}
+
+/* ============================================================
    CLOSE STALL (收攤表單：填剩餘杯數)
    ============================================================ */
 function renderCloseStall() {
@@ -1105,7 +1245,7 @@ function renderCloseStall() {
     <div class="slot">
       <div class="slot-title">
         <span>${esc(it.name)}${it.sweetness ? ` · ${esc(it.sweetness)}` : ''}</span>
-        <em>備貨 ${it.prepared} 杯</em>
+        <em>備貨 ${it.prepared} 杯${it.extra > 0 ? `（含追加 ${it.extra}）` : ''}</em>
       </div>
       <div class="slot-grid">
         <div>
@@ -1328,7 +1468,7 @@ function renderItemList(recs) {
       <div class="prow ihead" style="padding:8px 16px"><span>場次</span><span class="n">備貨</span><span class="n">賣出</span><span class="n">剩餘</span></div>
       ${rows.map(r => {
         const has = r.waste !== null;
-        const sub = [esc(r.location), r.sweetness ? esc(r.sweetness) : ''].filter(Boolean).join(' · ');
+        const sub = [esc(r.location), r.sweetness ? esc(r.sweetness) : '', r.extra > 0 ? `追加 ${r.extra}` : ''].filter(Boolean).join(' · ');
         return `<div class="prow">
           <div>${fmtShortY(r.date)}<small>${sub}</small></div>
           <span class="n">${r.prepared}</span>
@@ -1537,9 +1677,10 @@ loadAll();
 
 ### 已完成並測試通過
 測試方式共三層，全程 console 零錯誤：
-1. **後端單元測試**（Node `vm` 載入 `gas/程式碼.js`＋假 Sheet，計算 API 呼叫次數）12 項全過：舊 7 欄資料 fallback、快照寫入與調價／刪品項後歷史不變、單請求補登（全部有 waste→已收攤，部分→忽略並維持開攤中）、修改同日資料沿用快照且新品項取現價、批次刪除（兩段連續區段＝2 次 `deleteRows`、0 次 `deleteRow`）、`closeStall` 單次 `setValues` 與錯誤輸入拒絕、`LockService` 取得／釋放（含錯誤與逾時路徑）、`safeText` 六種開頭、`getInit`、只有 7 欄的表自動補欄、無效 `openStall` 不會清掉既有資料、改名同步／重複擋下／甜度逗號清除。
+1. **後端單元測試**（Node `vm` 載入 `gas/程式碼.js`＋假 Sheet，計算 API 呼叫次數）20 項全過（含追加：累加與單次寫入、非正整數／重複／不存在／已收攤皆拒絕且不部分寫入、剩餘上限＝原備貨＋追加、營收／毛利／報廢成本含追加、修改開攤時 `extra` 未帶沿用／帶值覆寫／帶 0 清除、快照與追加同時保留、舊 7／9 欄資料相容）；原 12 項：舊 7 欄資料 fallback、快照寫入與調價／刪品項後歷史不變、單請求補登（全部有 waste→已收攤，部分→忽略並維持開攤中）、修改同日資料沿用快照且新品項取現價、批次刪除（兩段連續區段＝2 次 `deleteRows`、0 次 `deleteRow`）、`closeStall` 單次 `setValues` 與錯誤輸入拒絕、`LockService` 取得／釋放（含錯誤與逾時路徑）、`safeText` 六種開頭、`getInit`、只有 7 欄的表自動補欄、無效 `openStall` 不會清掉既有資料、改名同步／重複擋下／甜度逗號清除。
 2. **端到端（前端 ＋ 真實後端程式碼 ＋ 假 Sheet）**：在手機尺寸瀏覽器中載入 `index.html`，`fetch` 導向「執行真實 `gas/程式碼.js` 的假試算表」：啟動只發 1 個 `getInit`；備貨／剩餘的空白、`10abc`、負數、小數、全形數字、0、超過備貨皆被擋；單一 `openStall` 完成補登且快照欄位寫入；調價 55→99 後當日營業額不變；修改已收攤場次的備貨沿用舊快照；清空剩餘需 `confirm` 並回到開攤中；收攤表單即時預覽的「待輸入／數字有誤／超過備貨」；刪除品項後當日歷史金額保留；`loadStall`／`loadRecords` 進行中切到表單並打字，回應完成後輸入不被清掉；`_editSweets` 不被重設；舊版 GAS（`getInit` 回 error）退回 3 請求；離線載入失敗；紀錄頁區間／地點／圖表（前一輪）。
-3. **線上部署驗證**：GAS @45 的 `getInit`、`getHistory`（含 `profit`）、`getItems` 對真實資料以唯讀 GET 驗證回應正常。
+3. **追加功能端到端（前端＋真實後端程式碼＋假 Sheet）**：開攤→追加畫面（空白／亂碼／負數／0 的預覽與送出驗證）→追加 12 再追加 8（累加為 20）→收攤上限為總量→營收／報廢成本／毛利含追加→已收攤時追加畫面與後端皆拒絕→修改表單顯示原備貨／追加／剩餘、不動直接儲存結果不變、修正追加、清除追加→補登一次填完備貨＋追加＋剩餘→紀錄頁顯示「追加 N」→追加畫面輸入中背景載入完成不洗掉輸入。
+4. **線上部署驗證**：GAS @46 的 `getInit`、`getHistory`（含 `profit` 與 `extra`）、`getItems` 對真實資料以唯讀 GET 驗證回應正常。
 
 ### 尚未驗證／未完成
 - **未對真實試算表做寫入測試**（避免污染使用者資料）；所有寫入邏輯僅在假 Sheet 驗證。尤其 `setValues` 寫入以 `'` 開頭的字串在真實 Sheets 是否被當成文字前綴並隱藏（預期如此），以及 `deleteRows`、`insertColumnsAfter` 在真實環境的行為，需實機確認。
@@ -1560,6 +1701,7 @@ loadAll();
 9. **營業額偏高為設計取捨**：試喝杯數算成賣出。
 10. 無 `fetch` timeout／重試；GAS 回應慢時僅顯示「載入中…」。
 11. 使用者真實資料中已出現甜度選項存成單一字串 `正常，半糖，無糖`（全形逗號，修正前輸入）；新版 `addSweet` 會去逗號、後端 `saveItem` 也會清除，但已存在的資料需使用者手動編輯修正。
+12. **追加功能的限制**：只能對「已在場次內的品項」追加（要新增品項請用「修改開攤／備貨資料」）；每品項只存累計追加杯數（J 欄），沒有每次追加的時間／明細；已收攤場次不能用追加畫面（後端也拒絕），需到修改表單調整；API 的 `prepared` 語意改為「總量」，若手機仍快取舊版前端，在已有追加的場次上修改開攤會把總量當原備貨寫回（重新整理即可避免）。
 
 ---
 
@@ -1569,7 +1711,7 @@ loadAll();
 2. **快照與舊資料相容邏輯**：`rowToItem`/`num`/`hasVal` 對 H、I 欄的各種內容（空字串、`0`、`null`、文字、僅 H 有值）的判斷是否正確；`0` 成本是否會被誤判為「無值」（目前以 `!== ''` 判斷，`0` 視為有值）；舊資料回填的最佳做法（一次性函式 vs 讀取時自動補寫）。
 3. **`safeText` 的實機行為與副作用**：以 `'` 前綴寫入後，`getValues()` 讀回是否已去除前綴（否則品項名稱比對、改名、`closeStall` 以名稱找列都會失敗）；日期欄 A 目前仍以字串寫入，是否也該處理；`saveItem` 對 `originalName` 與讀回值的比對是否與前綴互相影響。
 4. **前端非同步與重繪安全**：審查所有 `render()` 呼叫路徑（`loadAll`、`loadStall`、`loadRecords`、`confirmDelete*`、各 `go()`）的競態；`isFormScreen()` 守門是否遺漏（例如設定頁、紀錄頁篩選器輸入中被背景重繪）；快速切換日期時 `loadStall` 的過期回應處理；雙擊送出（按鈕已 `disabled`，但 `confirm` 前後的時序）。
-5. **輸入驗證與前後端一致性**：`parseNonNegInt` 與後端 `isNonNegInt` 是否對齊（前端半形整數字串 vs 後端 `Number()` 轉換，例如 `"1e2"`、`" 5"`）；`calc()`（前端）與 `getHistory`（後端）的營業額／毛利公式是否一致；inline `onclick` 字串拼接與 `esc()` 的 XSS／引號安全性；備貨量上限、品項名稱長度等未設限處。
+5. **輸入驗證與前後端一致性**：`parseNonNegInt` 與後端 `isNonNegInt` 是否對齊（前端半形整數字串 vs 後端 `Number()` 轉換，例如 `"1e2"`、`" 5"`）；`calc()`（前端）與 `getHistory`（後端）的營業額／毛利公式是否一致；inline `onclick` 字串拼接與 `esc()` 的 XSS／引號安全性；備貨量上限、品項名稱長度等未設限處；`prepared`（總量）與 `extra` 的語意在 `rowToItem`／`openStall`／`closeStall`／`addStock`／前端表單還原（`prepared − extra`）之間是否一致，尤其修改開攤時 `extra` 未帶、帶 0、與 `waste` 上限的交互。
 
 ---
 *附註：`.claude/settings.local.json` 為本機工具設定，與專案功能無關，未納入。專案中不存在 `.env` 或任何私密金鑰。*
