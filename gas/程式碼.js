@@ -285,7 +285,7 @@ function openStall(data) {
     if (!name) return respond({ error: '品項名稱不可空白' });
     if (seen[name]) return respond({ error: `「${name}」重複` });
     seen[name] = true;
-    if (!isNonNegInt(Number(it.prepared)) || Number(it.prepared) <= 0) return respond({ error: `「${name}」備貨量需為大於 0 的整數` });
+    if (!isNonNegInt(Number(it.prepared))) return respond({ error: `「${name}」備貨量需為 0 以上的整數` });
     if (hasVal(it.extra) && !isNonNegInt(Number(it.extra))) return respond({ error: `「${name}」追加杯數需為 0 以上的整數` });
   }
 
@@ -299,6 +299,9 @@ function openStall(data) {
     oldExtra[name] = num(r[9], 0);
   });
   const extraOf = it => hasVal(it.extra) ? Number(it.extra) : (oldExtra[String(it.name).trim()] || 0);
+  for (const it of items) {
+    if (Number(it.prepared) + extraOf(it) <= 0) return respond({ error: `「${String(it.name).trim()}」備貨量與追加杯數不可都是 0` });
+  }
 
   const hasWaste = it => it.waste !== undefined && it.waste !== null && it.waste !== '';
   const allWaste = items.every(hasWaste);
@@ -350,6 +353,8 @@ function closeStall(data) {
 }
 
 // 開攤中追加補貨：把本次追加杯數累加到 J 欄，整欄一次寫回
+// 開攤中追加補貨：既有品項把 add 累加到 J 欄；create:true 且場次內沒有該品項時，
+// 在當日最後一列之後插入新列（原備貨 0、追加 add），沿用當日地點並以現行價格寫入快照
 function addStock(data) {
   const sheet = SS.getSheetByName('出攤紀錄');
   if (!sheet || sheet.getLastRow() <= 1) return respond({ error: '無出攤紀錄' });
@@ -359,18 +364,42 @@ function addStock(data) {
 
   ensureRecCols(sheet);
   const rows = readRecRange(sheet);
+  let dayLast = -1, dayLocation = '';
+  rows.forEach((r, i) => {
+    if (toStr(r[0]) !== date) return;
+    dayLast = i;
+    if (!dayLocation) dayLocation = toStr(r[1]);
+  });
   const j = rows.map(r => [r[9]]);
+  const created = [];
   const seen = {};
   for (const it of items) {
+    const name = String(it.name || '').trim();
     const add = Number(it.add);
-    if (!isNonNegInt(add) || add <= 0) return respond({ error: `「${it.name}」追加杯數需為大於 0 的整數` });
-    if (seen[it.name]) return respond({ error: `「${it.name}」重複` });
-    seen[it.name] = true;
-    const i = rows.findIndex(r => toStr(r[0]) === date && toStr(r[2]) === it.name);
-    if (i < 0) return respond({ error: `找不到「${it.name}」的開攤紀錄` });
-    if (toStr(rows[i][6]) === '已收攤') return respond({ error: '已收攤的場次請用「修改開攤／備貨資料」調整追加量' });
-    j[i] = [num(j[i][0], 0) + add];
+    if (!name) return respond({ error: '品項名稱不可空白' });
+    if (!isNonNegInt(add) || add <= 0) return respond({ error: `「${name}」追加杯數需為大於 0 的整數` });
+    if (seen[name]) return respond({ error: `「${name}」重複` });
+    seen[name] = true;
+    const i = rows.findIndex(r => toStr(r[0]) === date && toStr(r[2]) === name);
+    if (i >= 0) {
+      if (toStr(rows[i][6]) === '已收攤') return respond({ error: '已收攤的場次請用「修改開攤／備貨資料」調整追加量' });
+      j[i] = [num(j[i][0], 0) + add];
+    } else {
+      if (!it.create || dayLast < 0) return respond({ error: `找不到「${name}」的開攤紀錄` });
+      if (toStr(rows[dayLast][6]) === '已收攤') return respond({ error: '已收攤的場次請用「修改開攤／備貨資料」調整追加量' });
+      created.push({ name, sweetness: String(it.sweetness || ''), add, price: it.price, cost: it.cost });
+    }
   }
+
   sheet.getRange(2, 10, rows.length, 1).setValues(j);
+  if (created.length > 0) {
+    const priceMap = getPriceMap();
+    const newRows = created.map(c => {
+      const snap = priceMap[c.name] || { price: num(c.price, 0), cost: num(c.cost, 0) };
+      return [date, safeText(dayLocation), safeText(c.name), safeText(c.sweetness), 0, '', '開攤中', snap.price, snap.cost, c.add];
+    });
+    sheet.insertRowsAfter(dayLast + 2, newRows.length);
+    sheet.getRange(dayLast + 3, 1, newRows.length, REC_COLS).setValues(newRows);
+  }
   return respond({ ok: true });
 }

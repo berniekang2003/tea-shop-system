@@ -204,7 +204,6 @@
 
 <script>
 const API = 'https://script.google.com/macros/s/AKfycbyKrS_BEKBj7Y2ZGq6iz4996VXMAApjxsNwaHFysmmjzsDjWi_L8p7O4LwM-8yJP_w-FQ/exec';
-const SLOTS = 4;
 const WD = ['日','一','二','三','四','五','六'];
 
 const state = {
@@ -476,6 +475,42 @@ function renderSession() {
 /* ============================================================
    OPEN STALL (開攤表單)
    ============================================================ */
+function slotHtml(i, ex) {
+  const selItem = ex && state.items.find(it => it.name === ex.name);
+  const orphan = !!(ex && !selItem);
+  const sweets = selItem ? selItem.sweetnesses : (orphan && ex.sweetness ? [ex.sweetness] : []);
+  const sweetOptions = sweets.map(sw => `<option value="${esc(sw)}" ${ex && sw === ex.sweetness ? 'selected' : ''}>${esc(sw)}</option>`).join('');
+  return `
+  <div class="slot">
+    <div class="slot-title">品項 ${i+1}</div>
+    <div class="slot-grid g3">
+      <div class="full">
+        <select id="item_${i}" onchange="onItemSelect(${i})">
+          <option value="">— 不使用 —</option>
+          ${orphan ? `<option value="${esc(ex.name)}" selected>${esc(ex.name)}（已從設定移除）</option>` : ''}
+          ${state.items.map(it => `<option value="${esc(it.name)}" ${ex && it.name === ex.name ? 'selected' : ''}>${esc(it.name)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="full" id="sweet_wrap_${i}" style="${sweets.length > 0 ? '' : 'display:none'}">
+        <label>甜度</label>
+        <select id="sweet_${i}">${sweetOptions}</select>
+      </div>
+      <div>
+        <label>備貨（杯）</label>
+        <input type="text" inputmode="numeric" id="qty_${i}" value="${ex ? ex.prepared - (ex.extra || 0) : ''}" placeholder="0">
+      </div>
+      <div>
+        <label>追加（杯）</label>
+        <input type="text" inputmode="numeric" id="ext_${i}" value="${ex && ex.extra > 0 ? ex.extra : ''}" placeholder="0">
+      </div>
+      <div>
+        <label>剩餘（杯）</label>
+        <input type="text" inputmode="numeric" id="rem_${i}" value="${ex && ex.waste !== null && ex.waste !== undefined ? ex.waste : ''}" placeholder="選填">
+      </div>
+    </div>
+  </div>`;
+}
+
 function renderOpenStall() {
   const s = state.stall;
   const existing = s && s.found ? s : null;
@@ -484,41 +519,9 @@ function renderOpenStall() {
   const locationOptions = state.locations.map(l =>
     `<option value="${esc(l)}" ${existing && existing.location === l ? 'selected' : ''}>${esc(l)}</option>`).join('');
 
-  const slots = Array.from({length: SLOTS}, (_, i) => {
-    const ex = existing && existing.items[i];
-    const selItem = ex && state.items.find(it => it.name === ex.name);
-    const showSweet = !!(selItem && selItem.sweetnesses.length > 0);
-    const sweetOptions = showSweet
-      ? selItem.sweetnesses.map(sw => `<option value="${esc(sw)}" ${sw === ex.sweetness ? 'selected' : ''}>${esc(sw)}</option>`).join('') : '';
-    return `
-    <div class="slot">
-      <div class="slot-title">品項 ${i+1}</div>
-      <div class="slot-grid g3">
-        <div class="full">
-          <select id="item_${i}" onchange="onItemSelect(${i})">
-            <option value="">— 不使用 —</option>
-            ${state.items.map(it => `<option value="${esc(it.name)}" ${ex && it.name === ex.name ? 'selected' : ''}>${esc(it.name)}</option>`).join('')}
-          </select>
-        </div>
-        <div class="full" id="sweet_wrap_${i}" style="${showSweet ? '' : 'display:none'}">
-          <label>甜度</label>
-          <select id="sweet_${i}">${sweetOptions}</select>
-        </div>
-        <div>
-          <label>備貨（杯）</label>
-          <input type="text" inputmode="numeric" id="qty_${i}" value="${ex ? ex.prepared - (ex.extra || 0) : ''}" placeholder="0">
-        </div>
-        <div>
-          <label>追加（杯）</label>
-          <input type="text" inputmode="numeric" id="ext_${i}" value="${ex && ex.extra > 0 ? ex.extra : ''}" placeholder="0">
-        </div>
-        <div>
-          <label>剩餘（杯）</label>
-          <input type="text" inputmode="numeric" id="rem_${i}" value="${ex && ex.waste !== null && ex.waste !== undefined ? ex.waste : ''}" placeholder="選填">
-        </div>
-      </div>
-    </div>`;
-  }).join('');
+  const count = Math.max(4, existing ? existing.items.length : 0);
+  window._slotCount = count;
+  const slots = Array.from({length: count}, (_, i) => slotHtml(i, existing && existing.items[i])).join('');
 
   return `
   <div class="header">
@@ -538,11 +541,20 @@ function renderOpenStall() {
     </div>
   </div>
   <div class="section">
-    <div class="section-label">品項與備貨量（最多 ${SLOTS} 項）</div>
-    <div class="hint">${existing && existing.status === '已收攤' ? '剩餘杯數已填寫；全部清空會讓這個場次回到「開攤中」。追加杯數可在這裡修正。' : '備貨是開攤時帶的杯數，追加是當天中途補貨的總杯數（選填）。已經收攤的話，剩餘杯數可以一起填完；全部留空則只記錄開攤。'}</div>
-    ${slots}
+    <div class="section-label">品項與備貨量</div>
+    <div class="hint">${existing && existing.status === '已收攤' ? '剩餘杯數已填寫；全部清空會讓這個場次回到「開攤中」。追加杯數可在這裡修正。' : '備貨是開攤時帶的杯數，追加是當天中途補貨的總杯數（選填）。已經收攤的話，剩餘杯數可以一起填完；全部留空則只記錄開攤。'}　當天才補上的新品項，備貨填 0、追加填杯數即可。</div>
+    <div id="slots">${slots}</div>
+    <button class="btn btn-secondary" id="addSlotBtn" onclick="addSlot()" style="${count >= state.items.length ? 'display:none' : ''}">＋ 再加一個品項</button>
     <button class="btn btn-primary" id="submitOpen" onclick="submitOpenStall(this)">${existing ? '儲存' : '確認開攤'}</button>
   </div>`;
+}
+
+function addSlot() {
+  const i = window._slotCount;
+  document.getElementById('slots').insertAdjacentHTML('beforeend', slotHtml(i, null));
+  window._slotCount = i + 1;
+  if (window._slotCount >= state.items.length) document.getElementById('addSlotBtn').style.display = 'none';
+  document.getElementById(`item_${i}`).scrollIntoView({ block: 'center' });
 }
 
 function onItemSelect(idx) {
@@ -565,23 +577,28 @@ async function submitOpenStall(btn) {
 
   const items = [];
   let remCount = 0;
-  for (let i = 0; i < SLOTS; i++) {
+  for (let i = 0; i < window._slotCount; i++) {
     const name = document.getElementById(`item_${i}`).value;
     if (!name) continue;
     const wrap = document.getElementById(`sweet_wrap_${i}`);
     const sweetness = wrap.style.display !== 'none' ? document.getElementById(`sweet_${i}`).value : '';
     const qtyRaw = document.getElementById(`qty_${i}`).value.trim();
-    if (qtyRaw === '') { toast(`請填寫「${name}」的備貨量`); return; }
-    const prepared = parseNonNegInt(qtyRaw);
-    if (prepared === null) { toast(`「${name}」備貨量請輸入 0 以上的整數`); return; }
-    if (prepared === 0) { toast(`「${name}」備貨量需大於 0`); return; }
-    if (items.some(it => it.name === name)) { toast(`「${name}」重複選取`); return; }
     const extRaw = document.getElementById(`ext_${i}`).value.trim();
     let extra = 0;
     if (extRaw !== '') {
       extra = parseNonNegInt(extRaw);
       if (extra === null) { toast(`「${name}」追加杯數請輸入 0 以上的整數`); return; }
     }
+    let prepared;
+    if (qtyRaw === '') {
+      if (extra === 0) { toast(`請填寫「${name}」的備貨量`); return; }
+      prepared = 0;
+    } else {
+      prepared = parseNonNegInt(qtyRaw);
+      if (prepared === null) { toast(`「${name}」備貨量請輸入 0 以上的整數`); return; }
+    }
+    if (prepared + extra === 0) { toast(`「${name}」備貨量需大於 0`); return; }
+    if (items.some(it => it.name === name)) { toast(`「${name}」重複選取`); return; }
     const item = { name, sweetness, prepared, extra };
     const remRaw = document.getElementById(`rem_${i}`).value.trim();
     if (remRaw !== '') {
@@ -641,6 +658,21 @@ function renderTopup() {
       </div>
     </div>`).join('');
 
+  const inStall = new Set(s.items.map(i => i.name));
+  const others = state.items.filter(it => !inStall.has(it.name));
+  window._topupOthers = others;
+  const newRows = others.map((it, k) => `
+    <div class="slot">
+      <div class="slot-title"><span>${esc(it.name)}</span><em>${money(it.price)} / 杯</em></div>
+      <div class="slot-grid">
+        ${it.sweetnesses.length > 0 ? `<div><label>甜度</label><select id="nsweet_${k}">${it.sweetnesses.map(sw => `<option value="${esc(sw)}">${esc(sw)}</option>`).join('')}</select></div>` : ''}
+        <div ${it.sweetnesses.length > 0 ? '' : 'class="full"'}>
+          <label>追加（杯）</label>
+          <input type="text" inputmode="numeric" id="nadd_${k}" placeholder="0">
+        </div>
+      </div>
+    </div>`).join('');
+
   return `
   <div class="header">
     <div class="header-row">
@@ -651,8 +683,11 @@ function renderTopup() {
     <div class="header-sub">${fmtLong(state.viewDate)} · ${esc(s.location)}</div>
   </div>
   <div class="section">
-    <div class="section-label">只填有補貨的品項，其他留空</div>
+    <div class="section-label">場次內的品項：只填有補貨的，其他留空</div>
     ${rows}
+    ${others.length > 0 ? `
+    <div class="section-label" style="margin-top:20px">新增其他品項（今天沒帶、現在才補上的）</div>
+    ${newRows}` : ''}
     <button class="btn btn-primary" id="submitTopup" onclick="submitTopup(this)">確認追加</button>
   </div>`;
 }
@@ -672,7 +707,7 @@ function updateTopup() {
 async function submitTopup(btn) {
   const s = state.stall;
   const items = [];
-  let total = 0;
+  let total = 0, newCount = 0;
   for (let i = 0; i < s.items.length; i++) {
     const raw = document.getElementById(`add_${i}`).value.trim();
     if (raw === '') continue;
@@ -682,6 +717,18 @@ async function submitTopup(btn) {
     items.push({ name: s.items[i].name, add });
     total += add;
   }
+  const others = window._topupOthers || [];
+  for (let k = 0; k < others.length; k++) {
+    const raw = document.getElementById(`nadd_${k}`).value.trim();
+    if (raw === '') continue;
+    const add = parseNonNegInt(raw);
+    if (add === null) { toast(`「${others[k].name}」追加杯數請輸入 0 以上的整數`); return; }
+    if (add === 0) continue;
+    const sw = document.getElementById(`nsweet_${k}`);
+    items.push({ name: others[k].name, sweetness: sw ? sw.value : '', add, create: true });
+    total += add;
+    newCount++;
+  }
   if (items.length === 0) { toast('請至少填寫一項追加杯數'); return; }
 
   btn.disabled = true;
@@ -690,7 +737,7 @@ async function submitTopup(btn) {
     const res = await apiPost({ action: 'addStock', date: state.viewDate, items });
     if (res.ok) {
       await refreshStall();
-      toast(`已追加 ${total} 杯`);
+      toast(newCount > 0 ? `已追加 ${total} 杯（新增 ${newCount} 個品項）` : `已追加 ${total} 杯`);
       go('session');
       return;
     }
